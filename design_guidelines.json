@@ -1,0 +1,113 @@
+{
+  "project_info": {
+    "name": "Gestão Multi-Tenant SaaS para Pequenos Negócios de Serviços",
+    "language": "pt-BR",
+    "app_type": "saas_app",
+    "theme": "Light Modern Corporate SaaS (Sóbrio, Elegante e Neutro)",
+    "target_audience": "Barbearias, Salões de Beleza, Manicures, Clínicas de Estética, Pet Shops"
+  },
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "forbidden_fonts": ["Space Grotesk"],
+    "hierarchy": {
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight",
+      "h2_section": "text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900",
+      "h3_card": "text-lg sm:text-xl font-semibold text-slate-900",
+      "subtitle": "text-base sm:text-lg text-slate-600 font-normal leading-relaxed",
+      "body": "text-sm sm:text-base text-slate-700 leading-normal",
+      "caption_badge": "text-xs font-medium uppercase tracking-wider text-slate-500"
+    }
+  },
+  "colors": {
+    "archetype": "SWISS & HIGH-CONTRAST / PERFORMANCE CORPORATE",
+    "palette": {
+      "background": "#F8FAFC",
+      "surface_card": "#FFFFFF",
+      "sidebar_bg": "#0F172A",
+      "sidebar_fg": "#F8FAFC",
+      "sidebar_muted": "#94A3B8",
+      "sidebar_border": "#1E293B",
+      "primary": "#4F46E5",
+      "primary_hover": "#4338CA",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#E2E8F0",
+      "secondary_foreground": "#0F172A",
+      "accent": "#6366F1",
+      "muted": "#F1F5F9",
+      "muted_foreground": "#64748B",
+      "border": "#E2E8F0",
+      "input_border": "#CBD5E1",
+      "ring_focus": "#6366F1",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "destructive": "#EF4444",
+      "badge_em_breve": "#FEF3C7",
+      "badge_em_breve_text": "#92400E"
+    },
+    "forbidden_colors": ["#1B93A4", "#7351B7"],
+    "contrast_rules": "Texto sobre fundos escuros deve sempre usar cores claras explícitas (ex: hover:text-white). APCA contrast ratio >= 4.5:1 para corpo e 3:1 para títulos."
+  },
+  "layout_and_spacing": {
+    "spacing_philosophy": "Generous Spacing (2-3x mais espaço do que o padrão). Usar p-6 a p-8 em containers com borda para evitar colisão.",
+    "bento_grid": "Grid responsiva mobile-first: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6. Usar h-full em elementos para uniformidade vertical.",
+    "shell_structure": "Sidebar fixa à esquerda em desktop (w-64) + Header superior fixo (h-16) com avatar, tenant switcher e menu do usuário + Área principal de conteúdo (pt-20 px-4 md:px-8 pb-12)."
+  },
+  "component_guidelines": {
+    "forms_and_inputs": "Usar Shadcn Input, Select, Checkbox e Form. Estilizar campos com focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500. Validações claras em vermelho (text-red-500 text-xs mt-1).",
+    "buttons": "Botões primários em Indigo (#4F46E5) com cantos levemente arredondados (rounded-md ou rounded-lg), transições suaves em hover (hover:bg-indigo-700 active:scale-[0.98]).",
+    "cards": "Cards com fundo branco (#FFFFFF), bordas sutis (border border-slate-200), sombra leve (shadow-sm hover:shadow-md transition-shadow), sem gradientes excessivos.",
+    "badges": "Indicadores 'Em breve' com estilo de cápsula (px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200).",
+    "toasts": "Usar Sonner para notificações de sucesso, erro e alertas. Posicionamento no canto superior direito ou inferior direito.",
+    "data_test_id_rule": "MANDATÓRIO: Adicionar atributos data-testid em todos os elementos interativos, formulários, botões, links, cards de menu e badges de função (ex: data-testid='login-submit-btn', data-testid='company-name-input')."
+  },
+  "pages_and_screens": {
+    "register": {
+      "title": "Cadastro de Usuário",
+      "fields": ["Nome Completo", "E-mail", "Senha", "Confirmação de Senha"],
+      "ctas": ["Criar Conta", "Já possui uma conta? Faça Login"]
+    },
+    "login": {
+      "title": "Acesso ao Sistema",
+      "fields": ["E-mail", "Senha"],
+      "ctas": ["Entrar", "Criar nova conta", "Esqueceu a senha?"]
+    },
+    "onboarding": {
+      "title": "Configuração Inicial da Empresa",
+      "fields": ["Nome da Empresa", "Tipo de Negócio (BARBERSHOP, BEAUTY_SALON, MANICURE, AESTHETICS, PET_SHOP)"],
+      "ctas": ["Concluir Onboarding"]
+    },
+    "dashboard": {
+      "title": "Painel Principal",
+      "elements": [
+        "Greeting com nome do usuário e tenant ativo",
+        "Resumo do Tipo de Negócio com Badge",
+        "Grid de Módulos (Agenda, Clientes, Serviços, Profissionais, Financeiro) com indicador 'Em Breve'",
+        "Atalhos de Acesso Rápido para Configurações e Membros"
+      ]
+    },
+    "company_settings": {
+      "permission": "Apenas OWNER",
+      "fields": ["Nome", "Tipo de Negócio", "Logo (Upload Object Storage)", "Foto do Estabelecimento (Upload Object Storage)", "Descrição", "Telefone", "E-mail", "Endereço", "Cidade", "Estado", "CEP"]
+    },
+    "users_memberships": {
+      "permission": "Apenas OWNER / MANAGER",
+      "elements": ["Lista de Usuários Associados", "Função do Usuário (OWNER, MANAGER, PROFESSIONAL)", "Modal de Convite/Adição de novo Usuário"]
+    }
+  },
+  "image_urls": {
+    "salon_modern": "https://images.unsplash.com/photo-1536520002442-39764a41e987?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBiYXJiZXJzaG9wJTIwc2Fsb24lMjBiZWF1dHklMjBwZXRzaG9wJTIwaW50ZXJpb3IlMjBzdG9yZXxlbnwwfHx8fDE3ODkxNTIyMDJ8MA&ixlib=rb-4.1.0&q=85",
+    "barbershop_rustic": "https://images.unsplash.com/photo-1675599193990-33d71150902b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjBiYXJiZXJzaG9wJTIwc2Fsb24lMjBiZWF1dHklMjBwZXRzaG9wJTIwaW50ZXJpb3IlMjBzdG9yZXxlbnwwfHx8fDE3ODkxNTIyMDJ8MA&ixlib=rb-4.1.0&q=85",
+    "aesthetic_lounge": "https://images.unsplash.com/photo-1633681926035-ec1ac984418a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBiYXJiZXJzaG9wJTIwc2Fsb24lMjBiZWF1dHklMjBwZXRzaG9wJTIwaW50ZXJpb3IlMjBzdG9yZXxlbnwwfHx8fDE3ODkxNTIyMDJ8MA&ixlib=rb-4.1.0&q=85",
+    "hair_salon_chairs": "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBiYXJiZXJzaG9wJTIwc2Fsb24lMjBiZWF1dHklMjBwZXRzaG9wJTIwaW50ZXJpb3IlMjBzdG9yZXxlbnwwfHx8fDE3ODkxNTIyMDJ8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "instructions_to_main_agent": [
+    "Criar uma interface limpa, corporativa, elegante e moderna focada em SaaS multi-tenant.",
+    "Implementar rotas protegidas verificando autenticação JWT e status de onboarding do tenant.",
+    "Usar Lucide React para os ícones no sidebar, headers, badges e cards.",
+    "Garantir que todas as telas possuam atributos data-testid em botões, campos de texto, formulários e itens de navegação.",
+    "O idioma deve ser estritamente Português do Brasil (pt-BR).",
+    "Seguir a especificação de papéis (OWNER, MANAGER, PROFESSIONAL) para bloquear telas de configurações para funções não autorizadas."
+  ]
+}

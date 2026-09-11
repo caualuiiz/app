@@ -1,0 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui,
+        sans-serif;
+    letter-spacing: -0.01em;
+}
+
+@layer base {
+    :root {
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+        --primary: 243 75% 59%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 11%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 226 100% 97%;
+        --accent-foreground: 243 75% 45%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 243 75% 59%;
+        --chart-1: 243 75% 59%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 32 95% 53%;
+        --chart-4: 199 89% 48%;
+        --chart-5: 340 82% 52%;
+        --radius: 0.65rem;
+        --sidebar-bg: 222 47% 11%;
+        --sidebar-fg: 210 40% 98%;
+        --sidebar-muted: 215 20% 65%;
+        --sidebar-border: 217 33% 17%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Custom scrollbar for the SaaS shell */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Subtle grid pattern used in auth pages */
+.auth-bg {
+    background-color: #f8fafc;
+    background-image:
+        radial-gradient(
+            circle at 20% 15%,
+            rgba(79, 70, 229, 0.08),
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 80% 85%,
+            rgba(99, 102, 241, 0.08),
+            transparent 40%
+        ),
+        linear-gradient(#e2e8f04d 1px, transparent 1px),
+        linear-gradient(90deg, #e2e8f04d 1px, transparent 1px);
+    background-size:
+        auto,
+        auto,
+        32px 32px,
+        32px 32px;
+}

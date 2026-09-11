@@ -1,0 +1,38 @@
+"""MongoDB connection singleton + index bootstrap."""
+from __future__ import annotations
+
+import os
+
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+
+_client: AsyncIOMotorClient | None = None
+_db: AsyncIOMotorDatabase | None = None
+
+
+def get_db() -> AsyncIOMotorDatabase:
+    global _client, _db
+    if _db is None:
+        _client = AsyncIOMotorClient(os.environ["MONGO_URL"])
+        _db = _client[os.environ["DB_NAME"]]
+    return _db
+
+
+async def create_indexes() -> None:
+    db = get_db()
+    await db.users.create_index("email", unique=True)
+    await db.companies.create_index("slug", unique=True)
+    await db.memberships.create_index(
+        [("user_id", 1), ("company_id", 1)], unique=True
+    )
+    await db.memberships.create_index("company_id")
+    await db.memberships.create_index("user_id")
+    await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
+    await db.login_attempts.create_index("identifier")
+
+
+def close_db() -> None:
+    global _client, _db
+    if _client is not None:
+        _client.close()
+    _client = None
+    _db = None

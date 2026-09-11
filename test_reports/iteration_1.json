@@ -1,0 +1,29 @@
+{
+  "summary": "First-finish latency-sensitive testing for Fase 1 multi-tenant SaaS. Tested core auth, onboarding, tenant isolation (CRITICAL), brute-force lockout, memberships and full E2E UI flow (register→onboarding→dashboard→logout→bad login→valid login). All critical checks passed. Deep coverage (uploads, PATCH/DELETE memberships edge cases, role-gate for MANAGER/PROFESSIONAL, /settings pages, password reset) deferred to full testing pass.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/register: 200, sets httpOnly cookies, returns needs_onboarding=true, active_company=null",
+    "GET /api/auth/me: 401 without cookie, 200 with cookie returning user+active context",
+    "POST /api/auth/login: bad creds → 401 'Credenciais inválidas'; valid creds → 200 with active_company + active_role after onboarding",
+    "POST /api/auth/logout: 200 and returns Set-Cookie access_token=''/refresh_token='' Max-Age=0 (browser will clear)",
+    "Brute-force lockout: after 5 failed logins, correct password returns HTTP 429 'Muitas tentativas...'",
+    "POST /api/companies: creates tenant, returns id+slug (empresa-a-teste), auto-assigns OWNER (verified via GET /memberships)",
+    "GET /api/companies/me: 403 'Nenhuma empresa associada ao usuário' when user has no membership",
+    "TENANT ISOLATION (CRITICAL): user B sending X-Company-Id of tenant A on GET /companies/me → HTTP 403; PATCH /companies/me with forged header → HTTP 403; GET /memberships with forged header → HTTP 403. Tenant A data unchanged.",
+    "POST /api/memberships: OWNER invited a non-existing user by email → 201, membership+user created, role=PROFESSIONAL",
+    "GET /api/memberships: returns OWNER + newly-invited member for active tenant",
+    "Frontend /register: form loads, submit creates account and auto-redirects to /onboarding",
+    "Frontend /onboarding: name+business-type select (BARBERSHOP) submits and redirects to /dashboard",
+    "Frontend /dashboard: greeting 'Olá, UI 👋', company name shown, business_type badge 'Barbearia', 5 'Em breve' module cards (agenda visible)",
+    "Frontend header user menu → logout returns to /login",
+    "Frontend /login: inline error 'Credenciais inválidas' shown for bad password",
+    "Frontend valid login redirects an onboarded user directly to /dashboard"
+  ],
+  "failed": [],
+  "action_items": [
+    "Full testing agent should still cover: unique slug -2 suffix generation, POST /uploads/company-image (logo/establishment happy path + wrong mime + oversize + cross-tenant download 403), PATCH /memberships/{id} cross-tenant rejection, DELETE self-membership rejection, PATCH /companies/me role gate (403 for PROFESSIONAL), /settings/company UI save + logo upload, /settings/users invite/change-role/remove UI, mobile hamburger drawer, /forgot-password + /reset-password (link is logged, not emailed in Fase 1)."
+  ],
+  "success_rate": {"backend": "100% (10/10 critical checks)", "frontend": "100% (7/7 critical flows)"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

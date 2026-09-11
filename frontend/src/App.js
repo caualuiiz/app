@@ -1,0 +1,61 @@
+import "@/index.css";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "sonner";
+
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import RequireRole from "@/components/RequireRole";
+import LoginPage from "@/pages/Login";
+import RegisterPage from "@/pages/Register";
+import OnboardingPage from "@/pages/Onboarding";
+import DashboardPage from "@/pages/Dashboard";
+import CompanySettingsPage from "@/pages/CompanySettings";
+import UsersPage from "@/pages/Users";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Toaster
+          richColors
+          position="top-right"
+          toastOptions={{
+            classNames: {
+              toast: "font-sans",
+            },
+          }}
+        />
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/settings/company"
+              element={
+                <RequireRole roles={["OWNER", "MANAGER"]}>
+                  <CompanySettingsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/settings/users"
+              element={
+                <RequireRole roles={["OWNER", "MANAGER"]}>
+                  <UsersPage />
+                </RequireRole>
+              }
+            />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
