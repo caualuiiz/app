@@ -17,6 +17,7 @@ import ServicesPage from "@/pages/Services";
 import AvailabilityPage from "@/pages/Availability";
 import LandingBuilderPage from "@/pages/LandingBuilder";
 import PublicLandingPage from "@/pages/PublicLanding";
+import PublicBookingPage from "@/pages/PublicBooking";
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
           </Route>
 
           <Route path="/:slug" element={<PublicLandingPage />} />
+          <Route path="/:slug/agendar" element={<PublicBookingPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
