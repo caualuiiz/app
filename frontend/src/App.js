@@ -11,20 +11,16 @@ import OnboardingPage from "@/pages/Onboarding";
 import DashboardPage from "@/pages/Dashboard";
 import CompanySettingsPage from "@/pages/CompanySettings";
 import UsersPage from "@/pages/Users";
+import AgendaPage from "@/pages/Agenda";
+import ClientsPage from "@/pages/Clients";
+import ServicesPage from "@/pages/Services";
+import AvailabilityPage from "@/pages/Availability";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster
-          richColors
-          position="top-right"
-          toastOptions={{
-            classNames: {
-              toast: "font-sans",
-            },
-          }}
-        />
+        <Toaster richColors position="top-right"/>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<LoginPage />} />
@@ -33,22 +29,12 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route
-              path="/settings/company"
-              element={
-                <RequireRole roles={["OWNER", "MANAGER"]}>
-                  <CompanySettingsPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/settings/users"
-              element={
-                <RequireRole roles={["OWNER", "MANAGER"]}>
-                  <UsersPage />
-                </RequireRole>
-              }
-            />
+            <Route path="/agenda" element={<AgendaPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/services" element={<RequireRole roles={["OWNER","MANAGER"]}><ServicesPage/></RequireRole>} />
+            <Route path="/availability" element={<RequireRole roles={["OWNER","MANAGER"]}><AvailabilityPage/></RequireRole>} />
+            <Route path="/settings/company" element={<RequireRole roles={["OWNER","MANAGER"]}><CompanySettingsPage/></RequireRole>} />
+            <Route path="/settings/users" element={<RequireRole roles={["OWNER","MANAGER"]}><UsersPage/></RequireRole>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -57,5 +43,4 @@ function App() {
     </BrowserRouter>
   );
 }
-
 export default App;

@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Calendar,
   ChevronDown,
+  Clock,
   DollarSign,
   LayoutDashboard,
   LogOut,
@@ -29,13 +30,15 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Painel", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { to: "/agenda", label: "Agenda", icon: Calendar, testId: "nav-agenda" },
+  { to: "/clients", label: "Clientes", icon: Users, testId: "nav-clients" },
+  { to: "/services", label: "Serviços", icon: Scissors, testId: "nav-services", roles: ["OWNER", "MANAGER"] },
+  { to: "/availability", label: "Disponibilidade", icon: Clock, testId: "nav-availability", roles: ["OWNER", "MANAGER"] },
   { to: "/settings/company", label: "Empresa", icon: Settings, testId: "nav-company", roles: ["OWNER", "MANAGER"] },
-  { to: "/settings/users", label: "Membros", icon: Users, testId: "nav-users", roles: ["OWNER", "MANAGER"] },
+  { to: "/settings/users", label: "Membros", icon: UserCog, testId: "nav-users", roles: ["OWNER", "MANAGER"] },
 ];
 
 const COMING_SOON = [
-  { label: "Agenda", icon: Calendar },
-  { label: "Serviços", icon: Scissors },
   { label: "Financeiro", icon: DollarSign },
 ];
 

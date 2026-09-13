@@ -28,6 +28,11 @@ async def create_indexes() -> None:
     await db.memberships.create_index("user_id")
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("identifier")
+    await db.clients.create_index([("company_id", 1), ("name", 1)])
+    await db.services.create_index([("company_id", 1), ("name", 1)])
+    await db.appointments.create_index([("company_id", 1), ("date", 1), ("start_time", 1)])
+    await db.appointments.create_index([("company_id", 1), ("professional_id", 1), ("date", 1)])
+    await db.appointments.create_index([("company_id", 1), ("client_id", 1)])
 
 
 def close_db() -> None:

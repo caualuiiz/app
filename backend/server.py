@@ -18,6 +18,13 @@ from routes_auth import router as auth_router  # noqa: E402
 from routes_company import router as company_router  # noqa: E402
 from routes_members import router as members_router  # noqa: E402
 from routes_uploads import router as uploads_router  # noqa: E402
+from routes_scheduling import (  # noqa: E402
+    appts_router,
+    avail_router,
+    clients_router,
+    dashboard_router,
+    services_router,
+)
 from storage import init_storage  # noqa: E402
 
 logging.basicConfig(
@@ -50,6 +57,11 @@ api_router.include_router(auth_router)
 api_router.include_router(company_router)
 api_router.include_router(members_router)
 api_router.include_router(uploads_router)
+api_router.include_router(clients_router)
+api_router.include_router(services_router)
+api_router.include_router(avail_router)
+api_router.include_router(appts_router)
+api_router.include_router(dashboard_router)
 app.include_router(api_router)
 
 frontend_url = os.environ.get("FRONTEND_URL", "").strip()

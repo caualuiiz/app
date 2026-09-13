@@ -1,46 +1,23 @@
-# Gestão SaaS — Fase 1 (Fundação Multi-Tenant)
+# Gestão SaaS — PRD
 
-## Problema original
-Construir a fundação de um SaaS multi-tenant profissional de gestão e agendamento para
-pequenos negócios de serviços (barbearias, salões, manicures, estética, pet shops).
-Fase 1 = SOMENTE fundação: auth, empresas, permissões, isolamento entre tenants.
-Nenhuma funcionalidade das fases 2–8 deve ser implementada.
+## Fase 1 (concluída em 11/02/2026)
+- Auth JWT (bcrypt + cookies httpOnly), registro/login/logout/refresh/forgot(log)/reset
+- Multi-tenant via memberships (OWNER/MANAGER/PROFESSIONAL); backend valida sempre
+- Onboarding, dashboard, empresa (uploads via Emergent Object Storage), gestão de membros
+- Isolamento validado com 2 tenants (403 em cross-tenant)
 
-## Arquitetura
-- **Stack**: FastAPI + MongoDB (Motor) + React (CRA) + Tailwind + shadcn/ui + sonner
-- **Auth**: JWT customizado (bcrypt + PyJWT, cookies httpOnly SameSite=None+Secure, 24h access + 7d refresh)
-- **Storage**: Emergent Object Storage (`INTEGRATION_PROXY_URL` + `EMERGENT_LLM_KEY`) para logo e foto
-- **Multi-tenant**: coleção `memberships` (user_id + company_id + role). O header `X-Company-Id` é apenas hint — o backend SEMPRE valida a membership real via query. Toda rota de tenant é filtrada por `membership["company_id"]`.
-- **Papéis**: OWNER, MANAGER, PROFESSIONAL
+## Fase 2 — Agenda e agendamentos (concluída 13/02/2026)
+- **Clientes**: CRUD + pesquisa + histórico (`/api/clients`), escopo por tenant
+- **Serviços**: CRUD com duração/preço/ativação + vínculo com profissionais (`/api/services`)
+- **Disponibilidade**: horários da empresa e por profissional com almoço (`/api/availability/...`)
+- **Agendamentos**: CRUD + validação de conflito, horário de funcionamento, dia inativo, almoço; cancelar libera slot; PROFESSIONAL só vê/altera os próprios (`/api/appointments`)
+- **Dashboard**: contadores por status + faturamento previsto + próximos atendimentos (`/api/dashboard/summary`)
+- **Frontend**: Agenda com visão Dia/Semana/Mês, navegação, modal criar/detalhar, badges por status
+- **Índices Mongo** adicionados; snapshot de nome/preço nos agendamentos
 
-## Personas
-- **OWNER**: proprietário; único que pode alterar nome da empresa, gerenciar membros e trocar papéis.
-- **MANAGER**: pode ver e editar configurações (exceto nome) e listar membros.
-- **PROFESSIONAL**: acesso limitado ao painel (permissões expansíveis nas próximas fases).
-
-## Requisitos entregues (11/02/2026)
-- Cadastro, login, logout, refresh, forgot-password (log), reset-password
-- Onboarding (criação de empresa + business_type + auto-OWNER)
-- Dashboard com greeting + 5 cards "Em breve" + atalhos para OWNER/MANAGER
-- Configurações da empresa (todos os campos + upload de logo/foto via Object Storage)
-- Gestão de membros (adicionar, trocar papel, remover)
-- Sidebar + header responsivos com menu do usuário
-- Rate-limit de brute force (5 tentativas → lock 15min)
-- Índices unique em `users.email`, `companies.slug`, `memberships(user_id, company_id)`
-
-## Isolamento multi-tenant testado
-- 2 tenants criados; Owner B tentou ler e alterar dados do Owner A enviando `X-Company-Id` forjado — todos os endpoints retornaram 403.
-- Owner B não vê memberships do tenant A.
-
-## Configuração externa
-- Nenhuma. `EMERGENT_LLM_KEY` é gerenciada pela plataforma; `INTEGRATION_PROXY_URL` já disponível.
-- Recuperação de senha por e-mail (Resend) foi propositalmente deixada preparada mas sem envio real — o link é logado no console (definição do usuário para Fase 1).
-
-## Backlog para próximas fases
-- FASE 2 — Configuração completa da empresa (horários, redes sociais, bandeira visual própria)
-- FASE 3 — Serviços e profissionais
-- FASE 4 — Agenda / calendário
-- FASE 5 — Clientes (CRM)
-- FASE 6 — Página pública de agendamento (usa o slug já gerado)
-- FASE 7 — Dashboard e relatórios
-- FASE 8 — Planos, assinaturas, pagamentos e painel admin do SaaS
+## Backlog próximas fases
+- FASE 3 — Página pública de agendamento (usa slug + services + disponibilidade)
+- FASE 4 — Notificações (Resend/WhatsApp) para confirmações
+- FASE 5 — Financeiro completo, comissões, comandas
+- FASE 6 — Relatórios avançados
+- FASE 7 — Planos, assinaturas, painel admin do SaaS
