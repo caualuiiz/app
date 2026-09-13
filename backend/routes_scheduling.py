@@ -319,6 +319,15 @@ async def _validate_slot(company_id: str, pro_id: str, date: str, start_time: st
         if not (end_m <= a_start or start_m >= a_end):
             raise HTTPException(409, f"Conflito com agendamento das {a['start_time']} às {a['end_time']}")
 
+    # Fase 4: bloqueios criados pelo assistente
+    blocks = await db.schedule_blocks.find({"company_id": company_id, "date": date}).to_list(200)
+    for b in blocks:
+        if b.get("professional_id") and b["professional_id"] != pro_id:
+            continue
+        b_start = _to_minutes(b["start_time"]); b_end = _to_minutes(b["end_time"])
+        if not (end_m <= b_start or start_m >= b_end):
+            raise HTTPException(409, f"Horário bloqueado das {b['start_time']} às {b['end_time']}")
+
 @appts_router.get("")
 async def list_appts(
     date_from: str = Query(...), date_to: str = Query(...),
