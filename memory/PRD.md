@@ -1,23 +1,25 @@
 # Gestão SaaS — PRD
 
-## Fase 1 (concluída em 11/02/2026)
-- Auth JWT (bcrypt + cookies httpOnly), registro/login/logout/refresh/forgot(log)/reset
-- Multi-tenant via memberships (OWNER/MANAGER/PROFESSIONAL); backend valida sempre
-- Onboarding, dashboard, empresa (uploads via Emergent Object Storage), gestão de membros
-- Isolamento validado com 2 tenants (403 em cross-tenant)
+## Fases concluídas
+- **Fase 1** (11/02/2026) — Auth JWT + multi-tenant + memberships + Company settings + Object Storage
+- **Fase 2** (13/02/2026) — Agenda/Clientes/Serviços/Disponibilidade/Agendamentos + validação de conflito + Dashboard real
+- **Fase 3** (13/02/2026) — Landing Page pública `/{slug}` + IA construtora conversacional (GPT-4o-mini via emergentintegrations) com preview em tempo real, upload de galeria, publicação, persistência
 
-## Fase 2 — Agenda e agendamentos (concluída 13/02/2026)
-- **Clientes**: CRUD + pesquisa + histórico (`/api/clients`), escopo por tenant
-- **Serviços**: CRUD com duração/preço/ativação + vínculo com profissionais (`/api/services`)
-- **Disponibilidade**: horários da empresa e por profissional com almoço (`/api/availability/...`)
-- **Agendamentos**: CRUD + validação de conflito, horário de funcionamento, dia inativo, almoço; cancelar libera slot; PROFESSIONAL só vê/altera os próprios (`/api/appointments`)
-- **Dashboard**: contadores por status + faturamento previsto + próximos atendimentos (`/api/dashboard/summary`)
-- **Frontend**: Agenda com visão Dia/Semana/Mês, navegação, modal criar/detalhar, badges por status
-- **Índices Mongo** adicionados; snapshot de nome/preço nos agendamentos
+## Endpoints Fase 3
+- `GET /api/landing/me` — carrega state + mensagens (auto-cria)
+- `POST /api/landing/me/chat` — IA responde e devolve state atualizado
+- `POST /api/landing/me/gallery` — upload de foto para galeria
+- `PUT /api/landing/me/state` — salvar state manualmente
+- `POST /api/landing/me/publish` — publicar
+- `GET /api/public/{slug}` — dados públicos da página
+- `GET /api/public/uploads/{path}` — servir imagens públicas (verifica ownership via company_id)
 
-## Backlog próximas fases
-- FASE 3 — Página pública de agendamento (usa slug + services + disponibilidade)
-- FASE 4 — Notificações (Resend/WhatsApp) para confirmações
-- FASE 5 — Financeiro completo, comissões, comandas
-- FASE 6 — Relatórios avançados
-- FASE 7 — Planos, assinaturas, painel admin do SaaS
+## Multi-tenant
+- Todas as rotas de landing usam `require_membership`; state e mensagens vinculados a `company_id`
+- Rota pública valida `slug` + `is_published`; upload público via `files.company_id`
+
+## Próximas fases sugeridas
+- Fase 4 — Fluxo de agendamento público a partir da landing (`/{slug}/agendar`)
+- Fase 5 — Notificações (Resend, WhatsApp)
+- Fase 6 — Financeiro completo
+- Fase 7 — Relatórios avançados + Painel admin do SaaS + Planos/assinaturas

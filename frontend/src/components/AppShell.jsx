@@ -10,6 +10,7 @@ import {
   Menu,
   Scissors,
   Settings,
+  Sparkles,
   Users,
   UserCog,
   X,
@@ -34,6 +35,7 @@ const NAV = [
   { to: "/clients", label: "Clientes", icon: Users, testId: "nav-clients" },
   { to: "/services", label: "Serviços", icon: Scissors, testId: "nav-services", roles: ["OWNER", "MANAGER"] },
   { to: "/availability", label: "Disponibilidade", icon: Clock, testId: "nav-availability", roles: ["OWNER", "MANAGER"] },
+  { to: "/landing", label: "Minha Landing", icon: Sparkles, testId: "nav-landing", roles: ["OWNER", "MANAGER"] },
   { to: "/settings/company", label: "Empresa", icon: Settings, testId: "nav-company", roles: ["OWNER", "MANAGER"] },
   { to: "/settings/users", label: "Membros", icon: UserCog, testId: "nav-users", roles: ["OWNER", "MANAGER"] },
 ];
