@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any
 
@@ -41,7 +42,7 @@ class ClaudeProvider(AIProvider):
             + "\n\nContrato de decisão: "
             + schema_description
             + "\n\nContexto confiável:\n"
-            + __import__("json").dumps(context, ensure_ascii=False, default=str)
+            + json.dumps(context, ensure_ascii=False, default=str)
         )
         try:
             response = await client.messages.parse(
