@@ -37,7 +37,7 @@ export default function PublicBookingPage() {
         setCtx(data); document.title = `Agendar - ${data.company.name}`;
       } catch (e) { setErr(e?.response?.data?.detail || "Página não disponível"); }
     })();
-  }, [slug]);
+  }, [slug, isCustomDomain]);
 
   const availablePros = useMemo(() => {
     if (!ctx || !service) return [];
@@ -58,7 +58,7 @@ export default function PublicBookingPage() {
       } catch (e) { toast.error(e?.response?.data?.detail || "Erro ao buscar horários"); }
       finally { setSlotsLoading(false); }
     })();
-  }, [step, service, professional, date, slug]);
+  }, [step, service, professional, date, slug, isCustomDomain]);
 
   const submit = async () => {
     setSubmitting(true);
