@@ -15,6 +15,7 @@ const BIZ_LABELS = { BARBERSHOP: "Barbearia", BEAUTY_SALON: "Salão de Beleza", 
 
 export default function PublicBookingPage() {
   const { slug } = useParams();
+  const isCustomDomain = !slug;
   const [ctx, setCtx] = useState(null);
   const [err, setErr] = useState("");
   const [step, setStep] = useState(1);
@@ -31,7 +32,7 @@ export default function PublicBookingPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${slug}/booking-context`);
+        const { data } = await axios.get(`${BACKEND}/api/public/${isCustomDomain ? "domain" : `${slug}/booking-context`}`);
         setCtx(data); document.title = `Agendar - ${data.company.name}`;
       } catch (e) { setErr(e?.response?.data?.detail || "Página não disponível"); }
     })();
@@ -48,7 +49,7 @@ export default function PublicBookingPage() {
     (async () => {
       setSlotsLoading(true);
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${slug}/slots`, {
+        const { data } = await axios.get(`${BACKEND}/api/public/${isCustomDomain ? "domain/slots" : `${slug}/slots`}`, {
           params: { service_id: service.id, professional_id: professional.id, date },
         });
         setSlots(data.slots);
@@ -60,7 +61,7 @@ export default function PublicBookingPage() {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const { data } = await axios.post(`${BACKEND}/api/public/${slug}/book`, {
+      const { data } = await axios.post(`${BACKEND}/api/public/${isCustomDomain ? "domain/book" : `${slug}/book`}`, {
         service_id: service.id, professional_id: professional.id, date, start_time: chosenTime,
         client_name: client.name, client_phone: client.phone,
         client_email: client.email || null, notes: client.notes || null,
@@ -87,7 +88,7 @@ export default function PublicBookingPage() {
           <p><strong>Horário:</strong> {confirmed.start_time} → {confirmed.end_time}</p>
           <p><Badge className="bg-amber-100 text-amber-800">Pendente de confirmação</Badge></p>
         </div>
-        <Link to={`/${slug}`} className="inline-block mt-6 text-indigo-600 hover:text-indigo-700 text-sm font-medium">Voltar à página</Link>
+        <Link to={isCustomDomain ? "/" : `/${slug}`} className="inline-block mt-6 text-indigo-600 hover:text-indigo-700 text-sm font-medium">Voltar à página</Link>
       </div>
     </div>
   );
@@ -95,7 +96,7 @@ export default function PublicBookingPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between">
-        <Link to={`/${slug}`} className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"><ArrowLeft className="h-4 w-4"/>Voltar</Link>
+        <Link to={isCustomDomain ? "/" : `/${slug}`} className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"><ArrowLeft className="h-4 w-4"/>Voltar</Link>
         <div className="text-right">
           <p className="text-xs uppercase tracking-widest text-slate-400">{BIZ_LABELS[ctx.company.business_type]}</p>
           <p className="font-bold" style={{ fontFamily: "'Plus Jakarta Sans'" }}>{ctx.company.name}</p>
