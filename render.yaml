@@ -56,7 +56,7 @@ services:
     runtime: static
     rootDir: frontend
     buildCommand: npm install --legacy-peer-deps && npm run build
-    staticPublishPath: frontend/build
+    staticPublishPath: build
     autoDeployTrigger: checksPass
     routes:
       - type: rewrite
