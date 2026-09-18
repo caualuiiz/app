@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from auth import is_valid_object_id, require_roles
 from db import get_db
 from models_domain import DomainCreate, DomainResponse
+from render_domains import RenderDomainError, add_custom_domain, delete_custom_domain
 
 
 router = APIRouter(prefix="/domains", tags=["domains"])
@@ -104,9 +105,21 @@ async def verify_domain(domain_id: str, m=Depends(require_roles("OWNER"))):
     if doc["verification_value"] not in values:
         raise HTTPException(400, "Registro TXT de verificação não corresponde")
 
+    render_domain_id = doc.get("render_domain_id")
+    render_status = doc.get("render_status")
+    try:
+        if not render_domain_id:
+            render_domain = add_custom_domain(doc["domain"])
+            render_domain_id = render_domain.get("id") or render_domain.get("name")
+            render_status = render_domain.get("verification_status") or render_domain.get("status") or "PENDING"
+    except RenderDomainError as exc:
+        raise HTTPException(503, f"Domínio verificado no SaaS, mas o provisionamento no Render falhou: {exc}") from exc
+
     updated = {
         "status": "VERIFIED",
         "verified_at": _now(),
+        "render_domain_id": render_domain_id,
+        "render_status": render_status,
     }
     await db.custom_domains.update_one(
         {"_id": doc["_id"]},
@@ -122,9 +135,13 @@ async def delete_domain(domain_id: str, m=Depends(require_roles("OWNER"))):
         raise HTTPException(400, "ID inválido")
 
     db = get_db()
-    result = await db.custom_domains.delete_one(
-        {"_id": ObjectId(domain_id), "company_id": m["company_id"]}
-    )
+    doc = await db.custom_domains.find_one({"_id": ObjectId(domain_id), "company_id": m["company_id"]})
+    if doc and doc.get("render_domain_id"):
+        try:
+            delete_custom_domain(doc["render_domain_id"])
+        except RenderDomainError:
+            pass
+    result = await db.custom_domains.delete_one({"_id": ObjectId(domain_id), "company_id": m["company_id"]})
     if result.deleted_count != 1:
         raise HTTPException(404, "Domínio não encontrado")
     return {"success": True}
