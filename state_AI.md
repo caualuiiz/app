@@ -44,7 +44,7 @@ A Fase 3.2 foi consolidada na branch `feature/ai-phase-3.2`. A Fase 3.3 endurece
 
 ## Verificação externa da integração
 
-A documentação atual da Anthropic confirma Structured Outputs por `output_config.format` e o helper Python `messages.parse()`. Também confirma que o modelo legado usado anteriormente no adapter está aposentado; `claude-sonnet-5` está listado como ativo. citeturn305588search0turn875295search0
+A documentação atual da Anthropic confirma Structured Outputs por `output_config.format` e o helper Python `messages.parse()`. Também confirma que o modelo legado usado anteriormente no adapter está aposentado; `claude-sonnet-5` está listado como ativo.
 
 ## Limitação atual
 
