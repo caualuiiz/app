@@ -1,6 +1,7 @@
 """Authentication endpoints (register / login / logout / me / password reset)."""
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import secrets
@@ -153,7 +154,7 @@ async def login(payload: LoginIn, request: Request, response: Response):
     user_out = _serialize_user(user)
 
     access = create_access_token(user_out["id"], user_out["email"])
-    refresh = create_refresh_token(user_out["id"])
+    refresh = await issue_refresh_session(user_out["id"])
     set_auth_cookies(response, access, refresh)
 
     company, role, needs_onboarding = await _load_active_context(user_out["id"])
@@ -221,8 +222,9 @@ async def forgot_password(payload: ForgotPasswordIn):
     # Always answer 200 to avoid user enumeration
     if user:
         token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         await db.password_reset_tokens.insert_one({
-            "token": token,
+            "token_hash": token_hash,
             "user_id": str(user["_id"]),
             "used": False,
             "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
@@ -236,7 +238,8 @@ async def forgot_password(payload: ForgotPasswordIn):
 @router.post("/reset-password")
 async def reset_password(payload: ResetPasswordIn):
     db = get_db()
-    doc = await db.password_reset_tokens.find_one({"token": payload.token})
+    token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+    doc = await db.password_reset_tokens.find_one({"token_hash": token_hash})
     if not doc or doc.get("used"):
         raise HTTPException(status_code=400, detail="Token inválido ou já utilizado")
     if doc["expires_at"] < datetime.now(timezone.utc):
@@ -251,5 +254,10 @@ async def reset_password(payload: ResetPasswordIn):
     )
     await db.password_reset_tokens.update_one(
         {"_id": doc["_id"]}, {"$set": {"used": True}}
+    )
+    # Invalidate all existing refresh sessions after a password change.
+    await db.refresh_sessions.update_many(
+        {"user_id": doc["user_id"], "revoked_at": None},
+        {"$set": {"revoked_at": _now_iso()}},
     )
     return {"success": True}
