@@ -88,7 +88,7 @@ async def generate_render_spec(
         "user_id": user_id,
         "layout_plan_request_id": plan_doc["request_id"],
         "render_specification": specification.model_dump(by_alias=True),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }
