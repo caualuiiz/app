@@ -38,8 +38,7 @@ class ClaudeProvider(AIProvider):
 
         client = AsyncAnthropic(api_key=self.api_key)
         prompt = (
-            system_prompt
-            + "\n\nContrato de decisão: "
+            "Contrato de decisão: "
             + schema_description
             + "\n\nContexto confiável:\n"
             + json.dumps(context, ensure_ascii=False, default=str)
