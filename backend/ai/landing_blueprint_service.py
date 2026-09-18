@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from db import get_db
 from .landing_blueprint import LandingBlueprint, LandingBlueprintResponse
+from feature_limits import enforce_monthly_ai_limit
 from .landing_brain import LandingBrain
 from .orchestrator import AIOrchestrator
 from .render_specification import (
@@ -225,6 +226,7 @@ async def create_landing_blueprint(
     if not company or not landing:
         raise HTTPException(404, "Empresa ou landing não encontrada")
 
+    await enforce_monthly_ai_limit(db, company_id)
     visual = await _latest(db, "visual_profiles", company_id)
     reference = await _latest(db, "reference_profiles", company_id)
     direction = await _latest(db, "art_directions", company_id)
