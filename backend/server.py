@@ -28,6 +28,7 @@ from routes_scheduling import (  # noqa: E402
 from routes_landing import router as landing_router, public_router as landing_public  # noqa: E402
 from routes_assistant import router as assistant_router  # noqa: E402
 from routes_design import router as design_router  # noqa: E402
+from routes_domains import router as domains_router  # noqa: E402
 from storage import init_storage  # noqa: E402
 
 logging.basicConfig(
@@ -70,6 +71,7 @@ api_router.include_router(landing_router)
 api_router.include_router(landing_public)
 api_router.include_router(assistant_router)
 api_router.include_router(design_router)
+api_router.include_router(domains_router)
 app.include_router(api_router)
 
 frontend_url = os.environ.get("FRONTEND_URL", "").strip()
