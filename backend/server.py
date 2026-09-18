@@ -31,7 +31,6 @@ from routes_design import router as design_router  # noqa: E402
 from routes_domains import router as domains_router  # noqa: E402
 from routes_billing import router as billing_router  # noqa: E402
 from routes_whatsapp import router as whatsapp_router  # noqa: E402
-from storage import init_storage  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -95,8 +94,6 @@ app.add_middleware(
 @app.on_event("startup")
 async def _startup():
     await create_indexes()
-    init_storage()
-
     from auth import hash_password, verify_password
 
     db = get_db()
