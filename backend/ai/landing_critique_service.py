@@ -41,17 +41,17 @@ async def create_critique(company_id: str, user_id: str, preview_id: str) -> Lan
               json.dumps(context, ensure_ascii=False, default=str))
 
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        key = os.environ.get("EMERGENT_LLM_KEY", "").strip()
-        if not key:
-            raise RuntimeError("EMERGENT_LLM_KEY não configurada")
-        engine = LandingBrain()
-        chat = LlmChat(api_key=key, session_id=f"landing-critique-{uuid.uuid4()}", system_message=build_system_prompt()).with_model("openai", engine.model)
-        raw = await chat.send_message(UserMessage(text=prompt))
-        text = str(raw).strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        critique = LandingCritique.model_validate(json.loads(text))
+        from .openai_runtime import OpenAIExecutionError, generate_json
+        result = await generate_json(
+            system_prompt=build_system_prompt(),
+            user_prompt=prompt,
+            model=engine.model,
+        )
+        critique = LandingCritique.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise HTTPException(503, "Landing Brain indisponível para a autocrítica") from exc
+    except Exception as exc:
+        raise HTTPException(502, "Autocrítica retornou formato inválido") from exc
     except Exception as exc:
         raise HTTPException(503, "Landing Brain indisponível para a autocrítica") from exc
 
