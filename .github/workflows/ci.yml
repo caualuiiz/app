@@ -43,8 +43,6 @@ jobs:
           cache-dependency-path: frontend/package.json
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-      - name: Inspect AJV tree
-        run: npm ls ajv ajv-keywords schema-utils fork-ts-checker-webpack-plugin --all || true
       - name: Tests
         run: CI=true npm test -- --watchAll=false --runInBand
       - name: Build
