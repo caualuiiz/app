@@ -6,11 +6,12 @@ import os
 import uuid
 from datetime import datetime, timezone
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile
 from pydantic import BaseModel, EmailStr, Field
 from auth import get_current_user, is_valid_object_id, require_membership, require_roles
 from db import get_db
 from storage import build_upload_path, get_object, put_object
+from routes_domains import resolve_custom_domain
 
 router = APIRouter(prefix="/landing", tags=["landing"])
 public_router = APIRouter(prefix="/public", tags=["public"])
@@ -258,6 +259,31 @@ async def public_file(path: str):
     except Exception as e: raise HTTPException(502, str(e))
     return Response(content=data, media_type=rec.get("content_type", ct))
 
+
+
+@public_router.get("/domain")
+async def public_domain(host: str | None = Header(default=None)):
+    domain = await resolve_custom_domain(host)
+    if not domain:
+        raise HTTPException(404, "Domínio não vinculado")
+    db = get_db()
+    comp = await db.companies.find_one(
+        {"_id": ObjectId(domain["company_id"]), "status": "ACTIVE"}
+    )
+    if not comp:
+        raise HTTPException(404, "Página não encontrada")
+    lp = await db.landing_pages.find_one({"company_id": domain["company_id"]})
+    state = (lp or {}).get("state", {}) if lp else {}
+    if not state.get("is_published"):
+        raise HTTPException(404, "Página ainda não publicada")
+    services = await db.services.find(
+        {"company_id": domain["company_id"], "is_active": True}
+    ).to_list(100)
+    return {
+        "company": _company_public(comp),
+        "state": state,
+        "services": [_svc_public(s) for s in services],
+    }
 
 # ============ PUBLIC BOOKING ============
 async def _resolve_public_company(slug: str) -> dict:
