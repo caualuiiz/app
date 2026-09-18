@@ -10,6 +10,8 @@ from ai.design_system import DesignSystemListResponse, DesignSystemResponse, Gen
 from ai.design_system_service import generate_design_system, list_design_systems
 from ai.layout_plan import GenerateLayoutPlanRequest, LayoutPlanListResponse, LayoutPlanResponse
 from ai.layout_plan_service import generate_layout_plan, list_layout_plans
+from ai.preview_application import CreatePreviewRequest, PreviewListResponse, PreviewResponse
+from ai.preview_service import create_preview, get_preview, list_previews
 from ai.render_specification import GenerateRenderSpecRequest, RenderSpecificationListResponse, RenderSpecificationResponse
 from ai.render_specification_service import generate_render_spec, list_render_specs
 from ai.reference import AnalyzeReferencesRequest, ReferenceProfileListResponse, ReferenceProfileResponse
@@ -78,3 +80,18 @@ async def generate_render_spec_route(payload: GenerateRenderSpecRequest, m=Depen
 @router.get("/render-spec", response_model=RenderSpecificationListResponse)
 async def get_render_specs(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"specifications": await list_render_specs(m["company_id"])}
+
+
+@router.post("/create-preview", response_model=PreviewResponse)
+async def create_design_preview(payload: CreatePreviewRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await create_preview(m["company_id"], m["user_id"], payload)
+
+
+@router.get("/preview/{preview_id}", response_model=PreviewResponse)
+async def get_design_preview(preview_id: str, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await get_preview(m["company_id"], preview_id)
+
+
+@router.get("/previews", response_model=PreviewListResponse)
+async def get_design_previews(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return {"previews": await list_previews(m["company_id"])}

@@ -25,6 +25,7 @@ export default function LandingBuilderPage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [creatingPreview, setCreatingPreview] = useState(false);
   const [tab, setTab] = useState("chat");
   const fileRef = useRef(null);
   const scrollRef = useRef(null);
@@ -91,6 +92,16 @@ export default function LandingBuilderPage() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
+  const createPreview = async () => {
+    setCreatingPreview(true);
+    try {
+      const { data: preview } = await api.post("/design/create-preview", {});
+      setData(d => ({ ...d, previewId: preview.preview_id, renderSpecification: preview.render_spec }));
+      toast.success("Preview criado sem publicar a página");
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setCreatingPreview(false); }
+  };
+
   const messages = data?.messages || [];
   const emptyChat = messages.length === 0;
   const publicUrl = `/${company?.slug}`;
@@ -104,6 +115,7 @@ export default function LandingBuilderPage() {
           <div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-indigo-600"/><span className="text-sm text-slate-600">Crie sua página conversando com nossa IA</span></div>
           <div className="flex gap-2">
             <Button variant="outline" asChild data-testid="view-public-btn"><a href={publicUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2"/>Visualizar</a></Button>
+            <Button variant="outline" onClick={createPreview} disabled={creatingPreview} data-testid="create-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{creatingPreview ? "Gerando..." : "Gerar Preview"}</Button>
             <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
           </div>
         </div>

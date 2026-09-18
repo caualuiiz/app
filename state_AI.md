@@ -2,101 +2,115 @@
 
 ## Current Phase
 
-Fase 2.7 — Renderer Integration
+Fase 2.8 — Preview Application
 
 ## Status
 
 IMPLEMENTED WITH LIMITATIONS
 
-As Fases 2.1 a 2.7 possuem contratos e integrações incrementais. A Render Specification pode ser validada no frontend e interpretada por um renderer declarativo seguro, com fallback para o renderer legado. A geração real via provider e a persistência real em MongoDB Atlas dependem de serviços externos não disponíveis nesta sessão.
+As Fases 2.1 a 2.8 possuem contratos e integrações incrementais. A Fase 2.8 cria Preview Sessions isoladas por empresa, vinculadas a uma Render Specification e a uma versão da landing, sem publicar ou alterar o Draft automaticamente.
 
 ## Implemented
 
-As Fases 2.1 a 2.6 permanecem implementadas com seus contratos, serviços, persistência e endpoints.
+As Fases 2.1 a 2.7 permanecem implementadas com seus contratos, serviços, persistência, renderer AI_SPEC/LEGACY e endpoints.
 
-A Fase 2.7 adiciona `isSafeRenderSpec`, que valida a versão, campos fechados, cores hexadecimais, tipos de seção, modos de layout, IDs únicos, referências estruturadas e namespaces permitidos.
+A Fase 2.8 adiciona `CreatePreviewRequest` e `PreviewResponse` com `preview_id`, `company_id`, `landing_version`, `render_spec`, `created_at`, `expires_at` e status `CREATED`, `ACTIVE`, `APPLIED`, `EXPIRED` ou `CANCELLED`.
 
-Foi criado `AISpecRenderer`, que interpreta somente estruturas previamente definidas. Ele não executa HTML, CSS, JavaScript, React, comandos ou código retornado pela IA. O renderer usa componentes React fixos, classes de layout pré-definidas e resolução limitada de referências públicas.
+A criação usa a Render Specification mais recente da empresa ou uma especificação solicitada explicitamente, sempre consultada com `company_id` autenticado. A sessão é criada como `ACTIVE`, com expiração configurável entre 5 minutos e 24 horas, padrão de 30 minutos.
 
-`LandingPreview` agora aceita uma Render Specification opcional. Quando ela passa a validação, renderiza com `AI_SPEC`; quando está ausente ou inválida, usa automaticamente o renderer `LEGACY` existente. `LandingPreview`, `PublicLanding` e `VisualEditor` foram preservados.
+A consulta e a listagem marcam sessões `ACTIVE` ou `CREATED` como `EXPIRED` quando o prazo termina. Sessões `APPLIED` ou `CANCELLED` não são alteradas automaticamente.
 
-O Landing Builder carrega a especificação autenticada mais recente de forma opcional. Se a chamada falhar ou não houver especificação, o preview continua funcionando com LEGACY. A landing pública aceita uma especificação somente se o backend futuramente a fornecer no campo aprovado; como não há aprovação/publicação de AI_SPEC nesta fase, o comportamento público atual permanece LEGACY.
+O serviço não toca em `landing_pages`, não altera `is_published`, não publica e não aplica mudanças ao Draft. A persistência é feita somente em `preview_sessions`. Um índice normal em `expires_at` foi criado para consultas; as sessões expiradas não são apagadas automaticamente, preservando histórico.
 
-As referências do frontend são resolvidas apenas para campos públicos permitidos da empresa, caminhos editoriais permitidos da landing e imagens da galeria. Propriedades sensíveis não são resolvidas.
+O Landing Builder recebeu uma ação explícita `Gerar Preview`. Ela cria a sessão e troca o renderer da prévia local para o `render_spec` retornado, sem publicar. O botão de publicação permanece separado.
 
 ## Files Created
 
-- `frontend/src/lib/renderSpec.js`
-- `frontend/src/lib/renderSpec.test.js`
-- `frontend/src/components/AISpecRenderer.jsx`
+- `backend/ai/preview_application.py`
+- `backend/ai/preview_service.py`
+- `tests/test_preview_application.py`
 
 ## Files Modified
 
-- `frontend/src/components/LandingPreview.jsx`
+- `backend/routes_design.py`
+- `backend/db.py`
 - `frontend/src/pages/LandingBuilder.jsx`
-- `frontend/src/pages/PublicLanding.jsx`
 - `state_AI.md`
 
 ## Endpoints Added
 
-Nenhum endpoint novo foi necessário nesta fase. O frontend reutiliza `GET /api/design/render-spec` criado na Fase 2.6.
+- `POST /api/design/create-preview`
+- `GET /api/design/preview/{preview_id}`
+- `GET /api/design/previews`
+
+Todos exigem membership ativa e papel `OWNER` ou `MANAGER`. O tenant é obtido da membership autenticada e não é aceito no payload.
 
 ## Database Changes
 
-Nenhuma alteração de banco nesta fase.
+- Nova coleção lógica `preview_sessions`.
+- Índice único em `preview_id`.
+- Índice em `preview_sessions(company_id, created_at desc)`.
+- Índice normal em `expires_at`, sem TTL destrutivo.
+- Nenhuma migração destrutiva.
+- Nenhuma alteração foi feita no MongoDB nesta sessão.
 
 ## Tests
 
-- `CI=true npm test -- --watchAll=false --runInBand`
-- `npm run build`
 - `python3 -m pytest -q`
 - `python3 -m compileall -q backend tests`
+- `CI=true npm test -- --watchAll=false --runInBand`
+- `npm run build`
+- Importação da aplicação FastAPI e verificação dos caminhos OpenAPI.
 - `git diff --check`.
 
 ## Passed
 
-- 3 testes frontend do validador AI_SPEC passaram.
-- O validador rejeita campos extras, referências inseguras e IDs duplicados.
-- O resolver rejeita propriedades sensíveis e só permite campos públicos.
-- 30 testes backend cumulativos passaram.
+- 34 testes backend cumulativos passaram.
+- 3 testes frontend passaram.
+- Expiração converte `ACTIVE` para `EXPIRED`.
+- Expiração não altera `APPLIED`.
+- Expiração tem limites entre 5 minutos e 24 horas.
+- Contrato rejeita campos desconhecidos.
+- Consultas mantêm o `company_id` autenticado.
 - Build frontend passou.
 - Compilação Python passou.
-- Nenhuma ocorrência de `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function` ou execução de comandos foi adicionada.
+- Os quinze endpoints de design foram registrados.
+- Nenhuma publicação ou alteração de Draft ocorre na criação de preview.
 
 ## Failed
 
 - Não foi executado E2E visual em navegador real.
-- Não foi validado um Render Specification real vindo do provider: `EMERGENT_LLM_KEY` não está disponível.
-- Não foi executado E2E com dois tenants.
+- Não foi validada uma Render Specification real vinda do provider: `EMERGENT_LLM_KEY` não está disponível.
+- Não foi executado E2E com dois tenants e MongoDB real.
 
 ## Known Limitations
 
-O renderer AI_SPEC cobre os tipos estruturados previstos, mas não tenta reproduzir todos os detalhes visuais possíveis de uma especificação futura. Motion e interação são interpretados como dados declarativos e não executam comportamento arbitrário nesta fase.
+A criação de Preview depende de uma Render Specification já persistida. A aprovação formal e o Apply ao Draft serão tratados na Fase 2.9.
 
-O endpoint público não expõe automaticamente Render Specifications não aprovadas. O fluxo de Preview/Apply e a separação formal Draft/Preview/Published serão tratados nas Fases 2.8 e 2.9.
+A ação do Landing Builder atualiza a prévia local com a especificação retornada, mas não mantém uma tela histórica completa de todas as Preview Sessions. O endpoint de listagem já está disponível para essa evolução.
 
-O build mantém dois warnings preexistentes de dependências de `useEffect` em `frontend/src/pages/Agenda.jsx` e `frontend/src/pages/Clients.jsx`; eles não foram alterados nesta fase.
+O build mantém dois warnings preexistentes de dependências de `useEffect` em `Agenda.jsx` e `Clients.jsx`; eles não foram alterados nesta fase.
 
 ## Security Notes
 
-A whitelist de campos existe no nível superior e nas seções. Referências só aceitam namespaces estruturados. O resolver público de empresa usa uma lista explícita de campos permitidos e não retorna senhas, tokens, cookies, segredos ou API keys. Nenhum código da IA é executado ou injetado no DOM.
+Todas as consultas de Render Specification e Preview Session incluem `company_id` autenticado. `preview_id` não substitui o filtro de tenant. Nenhuma rota de preview altera publicação, Draft, usuários, memberships, pagamentos ou dados operacionais.
 
 ## Performance Notes
 
-Imagens do AI_SPEC usam `loading="lazy"`. O renderer usa componentes fixos e classes conhecidas. Falha de validação não bloqueia o preview: o fallback LEGACY é determinístico.
+A listagem retorna no máximo vinte previews. A expiração é verificada sob demanda e usa índice por `expires_at`. O Render Specification é validado antes de entrar na sessão.
 
 ## Current Pause Point
 
-A Fase 2.7 está pronta para checkpoint após testes locais e build. O avanço está pausado antes da Fase 2.8 até que o provider, storage, MongoDB e fluxo visual sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
+A Fase 2.8 está pronta para checkpoint após testes locais e build. O avanço está pausado antes da Fase 2.9 até que provider, storage, MongoDB e fluxo visual sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
 
 ## Next Phase
 
-Fase 2.8 — Preview Application, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.7.
+Fase 2.9 — Apply Design, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.8.
 
 ## Git Commit
 
-`05f40a0` — `AI Digital Art Director — Phase 2.7 Renderer Integration`
+`6dcbab8` — `AI Digital Art Director — Phase 2.8 Preview Application`
 
 ## Timestamp
 
-2026-09-17T22:29:00-03:00
+2026-09-17T22:33:00-03:00
