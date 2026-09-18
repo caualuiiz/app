@@ -7,9 +7,12 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from db import get_db
+from .ai_decision_service import _latest
 from .landing_blueprint import LandingBlueprint, LandingBlueprintResponse
 from .landing_brain import LandingBrain
+from .orchestrator import AIOrchestrator
 from .render_specification import (
+    MediaBinding,
     RenderAccessibility,
     RenderInteractions,
     RenderMedia,
@@ -22,10 +25,6 @@ from .render_specification import (
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _latest(db, collection: str, company_id: str):
-    return db[collection].find_one({"company_id": company_id}, sort=[("created_at", -1)])
 
 
 def _section_type(section_id: str, purpose: str) -> str:
@@ -82,15 +81,52 @@ def _interaction(value: str) -> str:
     return "none"
 
 
-def compile_render_spec(company: dict, blueprint: LandingBlueprint) -> RenderSpecification:
+def _validate_media_and_sections(
+    blueprint: LandingBlueprint,
+    visual_doc: dict | None,
+) -> None:
+    allowed_paths = set((visual_doc or {}).get("image_paths") or [])
+    section_ids = {section.id for section in blueprint.layout_plan.sections}
+
+    seen: set[str] = set()
+    for placement in blueprint.media_placements:
+        if placement.image_path not in allowed_paths:
+            raise ValueError("Blueprint referenciou uma imagem que não pertence ao perfil visual")
+        if placement.image_path in seen:
+            raise ValueError("Cada imagem deve ter uma única decisão de posicionamento")
+        seen.add(placement.image_path)
+        unknown = set(placement.target_sections) - section_ids
+        if unknown:
+            raise ValueError("Blueprint contém seção de mídia inexistente")
+
+
+def compile_render_spec(
+    company: dict,
+    blueprint: LandingBlueprint,
+) -> RenderSpecification:
     sections = []
+    bindings = []
+    reference_by_path = {}
+
+    for index, placement in enumerate(blueprint.media_placements, start=1):
+        reference = f"media.image_{index:02d}"
+        reference_by_path[placement.image_path] = reference
+        bindings.append(
+            MediaBinding(
+                reference=reference,
+                source_path=placement.image_path,
+            )
+        )
+
     for section in blueprint.layout_plan.sections:
         section_type = _section_type(section.id, section.purpose)
         image_refs = [
-            placement.image_path
+            reference_by_path[placement.image_path]
             for placement in blueprint.media_placements
             if section.id in placement.target_sections
+            and placement.image_path in reference_by_path
         ][:12]
+
         content_reference_map = {
             "hero": ["landing.hero"],
             "about": ["landing.about"],
@@ -101,18 +137,21 @@ def compile_render_spec(company: dict, blueprint: LandingBlueprint) -> RenderSpe
             "hours": ["company.hours"],
             "contact": ["company.contact"],
         }
+
         typography = (
             blueprint.design_system.typography.display
             if section_type == "hero"
             else blueprint.design_system.typography.heading
         )
+
         sections.append(
             RenderSection(
                 id=section.id,
                 section_type=section_type,
                 layout_mode=section.layout,
                 content_references=content_reference_map.get(
-                    section_type, [f"landing.sections.{section.id}"]
+                    section_type,
+                    [f"landing.sections.{section.id}"],
                 ),
                 image_references=image_refs,
                 typography=typography,
@@ -154,6 +193,7 @@ def compile_render_spec(company: dict, blueprint: LandingBlueprint) -> RenderSpe
             lazy_loading=True,
             allowed_types=["image", "logo", "gallery"],
             fallback="Exibir fallback textual/visual seguro sem quebrar a composição.",
+            bindings=bindings,
         ),
         accessibility=RenderAccessibility(
             contrast="Respeitar contraste adequado definido pelo Design System.",
@@ -164,8 +204,12 @@ def compile_render_spec(company: dict, blueprint: LandingBlueprint) -> RenderSpe
     )
 
 
-async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlueprintResponse:
+async def create_landing_blueprint(
+    company_id: str,
+    user_id: str,
+) -> LandingBlueprintResponse:
     db = get_db()
+
     try:
         company = await db.companies.find_one({"_id": ObjectId(company_id)})
     except Exception as exc:
@@ -181,6 +225,7 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
     system = await _latest(db, "design_systems", company_id)
     layout = await _latest(db, "layout_plans", company_id)
 
+    state = landing.get("state") or {}
     context = {
         "company": {
             "name": company.get("name"),
@@ -189,10 +234,10 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
             "city": company.get("city"),
         },
         "landing": {
-            "hero": (landing.get("state") or {}).get("hero"),
-            "about": (landing.get("state") or {}).get("about"),
-            "style": (landing.get("state") or {}).get("style"),
-            "sections": (landing.get("state") or {}).get("sections"),
+            "hero": state.get("hero"),
+            "about": state.get("about"),
+            "style": state.get("style"),
+            "sections": state.get("sections"),
         },
         "visual_intelligence": visual,
         "reference_intelligence": reference,
@@ -201,12 +246,26 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
         "layout_plan": layout,
     }
 
+    engine = LandingBrain()
     try:
-        blueprint = await LandingBrain().build_blueprint(context=context)
+        blueprint = await AIOrchestrator(engine).build_blueprint(context=context)
     except RuntimeError as exc:
         raise HTTPException(503, "Landing Brain indisponível") from exc
     except ValueError as exc:
         raise HTTPException(502, "Blueprint rejeitado pela validação") from exc
+
+    try:
+        _validate_media_and_sections(blueprint, visual)
+    except ValueError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+    blueprint = blueprint.model_copy(
+        update={
+            "professional_profile": (
+                "Diretor de Arte Digital e Especialista em Landing Pages — 20+ anos"
+            )
+        }
+    )
 
     render_spec = compile_render_spec(company, blueprint)
     now = _now()
@@ -218,9 +277,9 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
             "request_id": request_id,
             "company_id": company_id,
             "user_id": user_id,
-            "agent": "landing-brain",
-            "agent_version": LandingBrain.version,
-            "model": LandingBrain().model,
+            "agent": engine.name,
+            "agent_version": engine.version,
+            "model": engine.model,
             "blueprint": blueprint.model_dump(by_alias=True),
             "created_at": now,
         }
@@ -232,8 +291,8 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
             "user_id": user_id,
             "layout_plan_request_id": layout.get("request_id") if layout else None,
             "render_specification": render_spec.model_dump(by_alias=True),
-            "provider": "landing-brain",
-            "model": LandingBrain().model,
+            "provider": engine.name,
+            "model": engine.model,
             "created_at": now,
         }
     )
@@ -241,9 +300,9 @@ async def create_landing_blueprint(company_id: str, user_id: str) -> LandingBlue
     return LandingBlueprintResponse(
         request_id=request_id,
         company_id=company_id,
-        agent="landing-brain",
-        agent_version=LandingBrain.version,
-        model=LandingBrain().model,
+        agent=engine.name,
+        agent_version=engine.version,
+        model=engine.model,
         blueprint=blueprint,
         render_spec_request_id=render_request_id,
         created_at=now,
