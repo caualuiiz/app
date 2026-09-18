@@ -260,10 +260,15 @@ async def public_domain(host: str | None = Header(default=None), domain: str | N
     services = await db.services.find(
         {"company_id": cid, "is_active": True}
     ).to_list(100)
+    spec_doc = await db.render_specifications.find_one(
+        {"company_id": cid},
+        sort=[("created_at", -1)],
+    )
     return {
         "company": _company_public(comp),
         "state": state,
         "services": [_svc_public(s) for s in services],
+        "render_specification": spec_doc.get("render_specification") if spec_doc else None,
     }
 
 
