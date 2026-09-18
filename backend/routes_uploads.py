@@ -1,4 +1,4 @@
-"""Image upload / download endpoints backed by Emergent Object Storage."""
+"""Tenant image upload / download endpoints backed by MongoDB GridFS."""
 from __future__ import annotations
 
 import logging
@@ -43,7 +43,7 @@ async def upload_company_image(
     path = build_upload_path(membership["company_id"], file.filename or f"image.{ALLOWED_MIME[file.content_type]}")
 
     try:
-        result = put_object(path, data, file.content_type)
+        result = await put_object(path, data, file.content_type)
     except Exception as e:  # noqa: BLE001
         logger.exception("Upload failed")
         raise HTTPException(status_code=502, detail=f"Falha no upload: {e}")
@@ -84,7 +84,7 @@ async def download_file(path: str, membership=Depends(require_roles("OWNER", "MA
     if record["company_id"] != membership["company_id"]:
         raise HTTPException(status_code=403, detail="Acesso negado")
     try:
-        data, content_type = get_object(path)
+        data, content_type = await get_object(path)
     except Exception as e:  # noqa: BLE001
         logger.exception("Storage read failed")
         raise HTTPException(status_code=502, detail=f"Falha ao ler arquivo: {e}")
