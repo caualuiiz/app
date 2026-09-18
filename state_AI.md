@@ -2,98 +2,90 @@
 
 ## Current Phase
 
-Fase 7 — Preparação para Deploy Comercial + Domínio Personalizado
+Fase 7 — Pré-deploy comercial concluído em código
 
 ## Status
 
-IMPLEMENTAÇÃO COMERCIAL AVANÇADA NA BRANCH `feature/ai-phase-3.2`; PENDENTE VALIDAÇÃO E2E/CI E CONFIGURAÇÃO EXTERNA DE PRODUÇÃO
+CÓDIGO COMERCIAL CONSOLIDADO; DEPLOY REAL BLOQUEADO APENAS POR CONFIGURAÇÃO EXTERNA DE INFRAESTRUTURA
 
-## Núcleo de IA
+## Núcleo
 
-O agente é um profissional fixo de:
-**Diretor de Arte Digital + Especialista em Landing Pages, 20+ anos.**
+O produto possui um Landing Brain com experiência fixa de 20+ anos:
+**Diretor de Arte Digital + Especialista em Landing Pages.**
 
-Ele não aprende com clientes. Os dados do cliente são matéria-prima para análise e execução.
+O agente não aprende com clientes. Analisa os dados de cada negócio e decide como usar fotos, referências, identidade visual, estrutura e conversão.
 
-## Pipeline de criação
+## Pipeline
 
 `Dados → Visual Intelligence → Landing Brain → Landing Blueprint → Render Specification → Preview → Autocrítica → Refinamento → Apply/Publish`
 
-O Landing Brain decide:
-- função de cada foto;
-- seção de destino;
-- tratamento, crop e ponto focal;
-- paleta e tipografia;
-- hierarquia e composição;
-- estrutura;
-- estratégia de conversão.
+## Entregas concluídas
 
-## Implementado
-
-- Landing Blueprint e Media Placement.
-- Visual Image Insight por imagem.
-- Media Binding seguro.
-- Preview/Apply integrado ao Blueprint.
-- Autocrítica estruturada da própria landing.
-- Refinamento de Blueprint a partir da crítica.
-- Publicação bloqueada quando a autocrítica reprova.
-- Engine direto via OpenAI Responses API; removida dependência privada do Emergent e de Anthropic.
-- CI GitHub para backend/frontend.
-- Segurança de refresh sessions com rotação/revogação.
-- Redução do access token para 30 minutos.
+- SaaS multi-tenant, agenda, clientes, serviços e booking público.
+- Landing pública e editor.
+- Visual Intelligence com análise por imagem.
+- Reference Intelligence.
+- Art Direction.
+- Design System.
+- Layout Plan.
+- Render Specification.
+- Preview/Apply.
+- Landing Brain profissional.
+- Blueprint com posicionamento de mídia.
+- Autocrítica e refinamento automático.
+- Publicação condicionada à crítica aprovada.
+- OpenAI Responses API como motor de execução.
+- WhatsApp Cloud API, múltiplos números, aprovação/recusa e lembretes.
+- Stripe Checkout, Portal, webhook e limites server-side.
+- Domínio personalizado com verificação e integração com Render Custom Domains.
+- Booking e landing em domínio personalizado.
+- Rotação/revogação de refresh sessions.
+- Access token reduzido para 30 minutos.
 - Remoção de armazenamento de senha temporária em texto.
-- WhatsApp Cloud API com múltiplos números de notificação.
-- Confirmação/recusa por WhatsApp.
-- Lembretes 24h/2h via cron.
-- Planos TRIAL/STARTER/PRO e limites server-side.
-- Stripe Checkout, Portal e webhook assinado.
-- Tela comercial para plano, domínio e WhatsApp.
-- Domínio personalizado com verificação TXT.
-- Landing e agendamento funcionando em domínio personalizado.
-- Blueprint Render com API, frontend e cron.
-- Configuração de segredos via Render `sync: false`/secret generation; nenhum segredo versionado.
+- CI para backend/frontend.
+- Blueprint Render para API, frontend e cron.
+- Nenhuma chave real versionada.
 
-## Segurança
+## Produção
 
-- Isolamento multi-tenant preservado.
-- Contexto da IA sanitizado.
-- Fotos precisam pertencer à empresa autorizada.
-- Media bindings seguros.
-- Webhook WhatsApp assinado.
-- Webhook Stripe assinado.
-- Domínios únicos e tenant-scoped.
-- Refresh sessions armazenadas com hash e revogação.
+O `render.yaml` está preparado para:
+- API FastAPI;
+- frontend React estático;
+- cron de lembretes;
+- secrets de MongoDB/OpenAI/Stripe/WhatsApp;
+- automação de custom domains via API do Render.
 
-## Infraestrutura
+Render documenta web/static/cron services em Blueprints e custom domains por serviço; a API também permite criar/verificar/remover custom domains. citeturn830529search1turn830529search0turn830529search6
 
-Render suporta web services, static sites e cron jobs em Blueprint YAML; custom domains podem ser adicionados aos web/static services e têm TLS gerenciado pelo Render. citeturn739394search0turn739394search1turn739394search2
+## Validação
 
-## Validação atual
+O workflow de CI foi configurado para pull requests, com cancelamento de execuções obsoletas.
 
-A branch está sob CI automático. As execuções estavam enfileiradas no momento do checkpoint; a validação final precisa considerar o commit mais recente.
+No momento do checkpoint, o GitHub Actions estava mantendo o último workflow em fila e o commit não apresentava status de falha. Isso é uma limitação do runner externo, não uma confirmação de teste verde.
 
-## Bloqueios externos restantes
+## Deploy real
 
-Para o deploy comercial real, ainda será necessário configurar no ambiente de produção:
+Ainda depende de credenciais/contas externas:
 - MongoDB;
-- OPENAI_API_KEY;
+- OpenAI API key;
 - Stripe;
 - Meta WhatsApp;
-- credenciais/conta de hospedagem;
-- DNS/domínio.
+- Render/AppDeploy;
+- DNS do domínio real.
 
-Esses valores não entram no GitHub.
+Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-O código de produto comercial está implementado. O próximo passo é:
-1. CI verde no commit final;
-2. merge para `main`;
-3. deploy em Render;
-4. configuração das variáveis secretas;
-5. domínio real;
-6. smoke test de produção;
-7. primeiro E2E com uma empresa real.
+Código consolidado na branch `feature/ai-phase-3.2` e preparado para merge/produção.
+
+Após conectar a infraestrutura externa:
+1. aplicar `render.yaml`;
+2. preencher secrets;
+3. deploy;
+4. smoke test;
+5. conectar primeiro domínio;
+6. executar E2E com cliente real.
 
 ## Timestamp
 
