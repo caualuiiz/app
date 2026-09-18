@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -56,7 +56,7 @@ export default function AgendaPage() {
     return { from: fmtDate(s), to: fmtDate(e) };
   }, [view, cursor]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = { date_from: range.from, date_to: range.to };
@@ -65,9 +65,9 @@ export default function AgendaPage() {
       setAppts(data);
     } catch (e) { toast.error(formatApiError(e)); }
     finally { setLoading(false); }
-  };
+  }, [range.from, range.to, isAdmin, proFilter]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [range.from, range.to, proFilter]);
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     (async () => {
