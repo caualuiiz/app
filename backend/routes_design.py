@@ -4,6 +4,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from auth import require_roles
+from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, GenerateArtDirectionRequest
+from ai.art_direction_service import generate_art_direction, list_directions
 from ai.reference import AnalyzeReferencesRequest, ReferenceProfileListResponse, ReferenceProfileResponse
 from ai.reference_intelligence import analyze_references, list_profiles as list_reference_profiles
 from ai.visual import AnalyzeImagesRequest, VisualProfileListResponse, VisualProfileResponse
@@ -30,3 +32,13 @@ async def analyze_design_references(payload: AnalyzeReferencesRequest, m=Depends
 @router.get("/reference-profile", response_model=ReferenceProfileListResponse)
 async def get_reference_profiles(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"profiles": await list_reference_profiles(m["company_id"])}
+
+
+@router.post("/generate-art-direction", response_model=ArtDirectionResponse)
+async def generate_design_art_direction(payload: GenerateArtDirectionRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await generate_art_direction(m["company_id"], m["user_id"], payload)
+
+
+@router.get("/art-direction", response_model=ArtDirectionListResponse)
+async def get_art_directions(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return {"directions": await list_directions(m["company_id"])}
