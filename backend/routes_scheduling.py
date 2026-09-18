@@ -8,6 +8,7 @@ from pydantic import BaseModel, EmailStr, Field
 from auth import get_current_user, is_valid_object_id, require_membership, require_roles
 from db import get_db
 from feature_limits import enforce_limit
+from whatsapp import send_booking_status, WhatsAppUnavailable
 
 AppointmentStatus = Literal["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]
 Weekday = Literal["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
@@ -423,10 +424,17 @@ async def update_appt(aid: str, payload: AppointmentUpdate,
             "end_time": end_time,
         })
 
+    previous_status = existing["status"]
     data["updated_at"] = now_iso()
     doc = await db.appointments.find_one_and_update(
         {"_id": _oid(aid)}, {"$set": data}, return_document=True,
     )
+    if previous_status != doc.get("status") and doc.get("status") in {"CONFIRMED", "CANCELLED"}:
+        try:
+            company = await db.companies.find_one({"_id": _oid(m["company_id"])})
+            await send_booking_status(company or {}, doc, confirmed=doc["status"] == "CONFIRMED")
+        except (WhatsAppUnavailable, Exception):
+            pass
     return _appt_out(doc)
 
 @appts_router.delete("/{aid}")
