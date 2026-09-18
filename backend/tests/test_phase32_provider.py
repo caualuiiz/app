@@ -46,3 +46,41 @@ def test_claude_provider_accepts_explicit_test_configuration():
     provider = ClaudeProvider(api_key="test-key", model="claude-sonnet-5")
     assert provider.name == "claude"
     assert provider.model == "claude-sonnet-5"
+
+def test_claude_provider_uses_native_structured_parser(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from ai.decision import StructuredDecision
+
+    class FakeMessages:
+        async def parse(self, **kwargs):
+            assert kwargs["model"] == "claude-sonnet-5"
+            assert kwargs["output_format"] is StructuredDecision
+            parsed = StructuredDecision(
+                summary="Teste real simulado",
+                actions=[],
+                confidence=0.88,
+                warnings=[],
+                missing_data=[],
+            )
+            return SimpleNamespace(parsed_output=parsed)
+
+    class FakeAsyncAnthropic:
+        def __init__(self, api_key):
+            assert api_key == "test-key"
+            self.messages = FakeMessages()
+
+    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(AsyncAnthropic=FakeAsyncAnthropic))
+
+    provider = ClaudeProvider(api_key="test-key", model="claude-sonnet-5")
+    result = asyncio.run(
+        provider.generate_structured_decision(
+            system_prompt="Teste",
+            context={"company": {"name": "Teste"}},
+            schema_description="Contrato",
+        )
+    )
+
+    assert result["summary"] == "Teste real simulado"
+    assert result["confidence"] == 0.88
