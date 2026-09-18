@@ -88,7 +88,7 @@ async def generate_design_system(
         "user_id": user_id,
         "art_direction_request_id": direction_doc.get("request_id"),
         "design_system": design_system.model_dump(by_alias=True),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }
