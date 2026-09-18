@@ -26,7 +26,7 @@ async def main() -> None:
                 "name": "Teste de integração",
                 "business_type": "barbearia",
                 "description": "Barbearia masculina de bairro",
-                "city": "São Gonçalo",
+                "city": "cidade de teste",
             },
             "landing": {
                 "hero": "Cortes modernos com atendimento personalizado",
