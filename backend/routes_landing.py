@@ -75,10 +75,30 @@ async def save_state(payload: StateUpdate, m=Depends(require_roles("OWNER", "MAN
 async def publish(m=Depends(require_roles("OWNER", "MANAGER"))):
     db = get_db()
     doc = await _get_or_create(m["company_id"])
-    st = doc.get("state", {}).copy(); st["is_published"] = True
-    await db.landing_pages.update_one({"company_id": m["company_id"]},
-                                      {"$set": {"state": st, "updated_at": _now()}})
-    return {"published": True}
+    critique = await db.landing_critiques.find_one(
+        {"company_id": m["company_id"]},
+        sort=[("created_at", -1)],
+    )
+    if not critique:
+        raise HTTPException(
+            409,
+            "Gere um Preview e execute a autocrítica do Landing Brain antes de publicar.",
+        )
+    critique_data = critique.get("critique") or {}
+    if not critique_data.get("ready_for_publish", False):
+        raise HTTPException(
+            409,
+            "O Landing Brain encontrou pontos que precisam ser corrigidos antes da publicação.",
+        )
+
+    st = doc.get("state", {}).copy()
+    st["is_published"] = True
+    st["last_critique_request_id"] = critique.get("request_id")
+    await db.landing_pages.update_one(
+        {"company_id": m["company_id"]},
+        {"$set": {"state": st, "updated_at": _now()}},
+    )
+    return {"published": True, "critique_request_id": critique.get("request_id")}
 
 @router.post("/me/gallery")
 async def upload_gallery(file: UploadFile = File(...), m=Depends(require_roles("OWNER", "MANAGER"))):
