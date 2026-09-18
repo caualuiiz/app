@@ -224,6 +224,196 @@ async def analyze_gallery(m=Depends(require_roles("OWNER", "MANAGER"))):
 
 
 # ============ PUBLIC ============
+
+
+
+async def _resolve_custom_domain_company(host: str | None) -> dict:
+    domain = await resolve_custom_domain(host)
+    if not domain:
+        raise HTTPException(404, "Domínio não vinculado")
+    db = get_db()
+    comp = await db.companies.find_one(
+        {"_id": ObjectId(domain["company_id"]), "status": "ACTIVE"}
+    )
+    if not comp:
+        raise HTTPException(404, "Página não encontrada")
+    lp = await db.landing_pages.find_one({"company_id": domain["company_id"]})
+    if not lp or not (lp.get("state") or {}).get("is_published"):
+        raise HTTPException(404, "Página ainda não publicada")
+    return comp
+
+
+@public_router.get("/domain")
+async def public_domain(host: str | None = Header(default=None)):
+    comp = await _resolve_custom_domain_company(host)
+    db = get_db()
+    cid = str(comp["_id"])
+    lp = await db.landing_pages.find_one({"company_id": cid})
+    state = (lp or {}).get("state", {}) if lp else {}
+    services = await db.services.find(
+        {"company_id": cid, "is_active": True}
+    ).to_list(100)
+    return {
+        "company": _company_public(comp),
+        "state": state,
+        "services": [_svc_public(s) for s in services],
+    }
+
+
+@public_router.get("/domain/booking-context")
+async def custom_domain_booking_context(host: str | None = Header(default=None)):
+    db = get_db()
+    comp = await _resolve_custom_domain_company(host)
+    cid = str(comp["_id"])
+    services = await db.services.find({"company_id": cid, "is_active": True}).to_list(100)
+    memberships = await db.memberships.find({"company_id": cid, "status": "ACTIVE"}).to_list(100)
+    users = {}
+    if memberships:
+        uids = [_oid(mm["user_id"]) for mm in memberships]
+        for u in await db.users.find({"_id": {"$in": uids}}).to_list(100):
+            users[str(u["_id"])] = u["name"]
+    pros = [{"id": mm["user_id"], "name": users.get(mm["user_id"], "—"), "role": mm["role"]} for mm in memberships]
+    return {
+        "company": {"name": comp["name"], "slug": comp["slug"], "business_type": comp["business_type"]},
+        "services": [_svc_public(s) for s in services],
+        "professionals": pros,
+        "business_hours": comp.get("business_hours"),
+    }
+
+
+@public_router.get("/domain/slots")
+async def custom_domain_slots(
+    service_id: str,
+    professional_id: str,
+    date: str,
+    host: str | None = Header(default=None),
+):
+    from routes_scheduling import _default_hours, _to_minutes, _from_minutes, _weekday_of
+    db = get_db()
+    comp = await _resolve_custom_domain_company(host)
+    cid = str(comp["_id"])
+    service = await db.services.find_one({"_id": _oid(service_id), "company_id": cid, "is_active": True})
+    if not service:
+        raise HTTPException(400, "Serviço inválido")
+    allowed = service.get("professional_ids") or []
+    if allowed and professional_id not in allowed:
+        raise HTTPException(400, "Profissional não executa este serviço")
+    memb = await db.memberships.find_one({"user_id": professional_id, "company_id": cid, "status": "ACTIVE"})
+    if not memb:
+        raise HTTPException(400, "Profissional inválido")
+    hours = memb.get("availability") or comp.get("business_hours") or _default_hours()
+    day = hours.get(_weekday_of(date), {})
+    if not day.get("active"):
+        return {"slots": []}
+    dur = service["duration_min"]
+    step = 30
+    open_m = _to_minutes(day["open"])
+    close_m = _to_minutes(day["close"])
+    br_s = _to_minutes(day["break_start"]) if day.get("break_start") else None
+    br_e = _to_minutes(day["break_end"]) if day.get("break_end") else None
+    existing = await db.appointments.find({
+        "company_id": cid,
+        "professional_id": professional_id,
+        "date": date,
+        "status": {"$ne": "CANCELLED"},
+    }).to_list(500)
+    busy = [
+        (_to_minutes(a["start_time"]), _to_minutes(a["start_time"]) + a["duration_min"])
+        for a in existing
+    ]
+    slots = []
+    t = open_m
+    while t + dur <= close_m:
+        end = t + dur
+        conflict = False
+        if br_s is not None and not (end <= br_s or t >= br_e):
+            conflict = True
+        for a1, a2 in busy:
+            if not (end <= a1 or t >= a2):
+                conflict = True
+                break
+        if not conflict:
+            slots.append(_from_minutes(t))
+        t += step
+    return {"slots": slots}
+
+
+@public_router.post("/domain/book", status_code=201)
+async def custom_domain_book(
+    payload: PublicBookIn,
+    host: str | None = Header(default=None),
+):
+    from routes_scheduling import _validate_slot, _to_minutes, _from_minutes
+    db = get_db()
+    comp = await _resolve_custom_domain_company(host)
+    cid = str(comp["_id"])
+    service = await db.services.find_one({"_id": _oid(payload.service_id), "company_id": cid, "is_active": True})
+    if not service:
+        raise HTTPException(400, "Serviço inválido")
+    memb = await db.memberships.find_one({"user_id": payload.professional_id, "company_id": cid, "status": "ACTIVE"})
+    if not memb:
+        raise HTTPException(400, "Profissional inválido")
+    pro_user = await db.users.find_one({"_id": _oid(payload.professional_id)})
+    if not pro_user:
+        raise HTTPException(400, "Profissional inválido")
+    allowed = service.get("professional_ids") or []
+    if allowed and payload.professional_id not in allowed:
+        raise HTTPException(400, "Profissional não executa este serviço")
+
+    duration = service["duration_min"]
+    await _validate_slot(cid, payload.professional_id, payload.date, payload.start_time, duration)
+
+    client = await db.clients.find_one({"company_id": cid, "phone": payload.client_phone})
+    n = _now()
+    if not client:
+        client_doc = {
+            "company_id": cid,
+            "name": payload.client_name.strip(),
+            "phone": payload.client_phone,
+            "email": payload.client_email,
+            "created_at": n,
+            "updated_at": n,
+            "source": "custom_domain",
+        }
+        res = await db.clients.insert_one(client_doc)
+        client = {"_id": res.inserted_id, **client_doc}
+    end_time = _from_minutes(_to_minutes(payload.start_time) + duration)
+    appt = {
+        "company_id": cid,
+        "client_id": str(client["_id"]),
+        "client_name": payload.client_name.strip(),
+        "client_phone": payload.client_phone,
+        "service_id": str(service["_id"]),
+        "service_name": service["name"],
+        "professional_id": payload.professional_id,
+        "professional_name": pro_user["name"],
+        "date": payload.date,
+        "start_time": payload.start_time,
+        "end_time": end_time,
+        "duration_min": duration,
+        "price": service.get("price", 0.0),
+        "notes": payload.notes,
+        "status": "PENDING",
+        "source": "custom_domain",
+        "created_at": n,
+        "updated_at": n,
+    }
+    res = await db.appointments.insert_one(appt)
+    appt["_id"] = res.inserted_id
+    try:
+        await send_new_booking(comp, appt)
+    except Exception:
+        pass
+    return {
+        "id": str(res.inserted_id),
+        "date": payload.date,
+        "start_time": payload.start_time,
+        "end_time": end_time,
+        "service_name": service["name"],
+        "professional_name": pro_user["name"],
+        "company_name": comp["name"],
+        "status": "PENDING",
+    }
 @public_router.get("/{slug}")
 async def public_page(slug: str):
     db = get_db()
@@ -261,32 +451,6 @@ async def public_file(path: str):
     try: data, ct = get_object(path)
     except Exception as e: raise HTTPException(502, str(e))
     return Response(content=data, media_type=rec.get("content_type", ct))
-
-
-
-@public_router.get("/domain")
-async def public_domain(host: str | None = Header(default=None)):
-    domain = await resolve_custom_domain(host)
-    if not domain:
-        raise HTTPException(404, "Domínio não vinculado")
-    db = get_db()
-    comp = await db.companies.find_one(
-        {"_id": ObjectId(domain["company_id"]), "status": "ACTIVE"}
-    )
-    if not comp:
-        raise HTTPException(404, "Página não encontrada")
-    lp = await db.landing_pages.find_one({"company_id": domain["company_id"]})
-    state = (lp or {}).get("state", {}) if lp else {}
-    if not state.get("is_published"):
-        raise HTTPException(404, "Página ainda não publicada")
-    services = await db.services.find(
-        {"company_id": domain["company_id"], "is_active": True}
-    ).to_list(100)
-    return {
-        "company": _company_public(comp),
-        "state": state,
-        "services": [_svc_public(s) for s in services],
-    }
 
 # ============ PUBLIC BOOKING ============
 async def _resolve_public_company(slug: str) -> dict:
