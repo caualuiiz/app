@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { businessTypeLabel } from "@/lib/api";
+import AISpecRenderer from "@/components/AISpecRenderer";
+import { isSafeRenderSpec } from "@/lib/renderSpec";
 
 function AuthedImg({ path, className }) {
   const [src, setSrc] = useState(null);
@@ -19,7 +21,10 @@ function AuthedImg({ path, className }) {
   return src ? <img src={src} className={className} alt=""/> : <div className={`${className} bg-slate-200 animate-pulse`}/>;
 }
 
-export default function LandingPreview({ state, company, publicMode = false, services = [], resolveUrl }) {
+export default function LandingPreview({ state, company, publicMode = false, services = [], resolveUrl, renderSpecification }) {
+  if (isSafeRenderSpec(renderSpecification)) {
+    return <AISpecRenderer specification={renderSpecification} state={state} company={company} services={services} publicMode={publicMode} resolveUrl={resolveUrl}/>;
+  }
   const s = state || {};
   const sec = s.sections || {};
   const primary = s.style?.primary_color || "#4f46e5";

@@ -30,7 +30,13 @@ export default function LandingBuilderPage() {
   const scrollRef = useRef(null);
 
   const load = async () => {
-    try { const { data } = await api.get("/landing/me"); setData(data); }
+    try {
+      const [landingResult, specResult] = await Promise.allSettled([api.get("/landing/me"), api.get("/design/render-spec")]);
+      if (landingResult.status !== "fulfilled") throw landingResult.reason;
+      const landing = landingResult.value.data;
+      const specifications = specResult.status === "fulfilled" ? specResult.value.data?.specifications || [] : [];
+      setData({ ...landing, renderSpecification: specifications[0]?.render_specification || null });
+    }
     catch (e) { toast.error(formatApiError(e)); }
   };
   useEffect(() => { load(); }, []);
@@ -155,7 +161,7 @@ export default function LandingBuilderPage() {
           <div className={`bg-slate-50 border border-slate-200 rounded-xl flex flex-col overflow-hidden ${tab === "chat" ? "hidden md:flex" : "flex"}`} data-testid="landing-preview">
             {data && <>
               <VisualEditor state={data.state} onChange={saveState}/>
-              <div className="flex-1 overflow-hidden"><LandingPreview state={data.state} company={company}/></div>
+              <div className="flex-1 overflow-hidden"><LandingPreview state={data.state} company={company} renderSpecification={data.renderSpecification}/></div>
             </>}
           </div>
         </div>

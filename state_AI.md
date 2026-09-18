@@ -2,116 +2,101 @@
 
 ## Current Phase
 
-Fase 2.6 — Render Specification
+Fase 2.7 — Renderer Integration
 
 ## Status
 
 IMPLEMENTED WITH LIMITATIONS
 
-As Fases 2.1 a 2.6 possuem contratos fechados, contexto company-scoped, persistência e endpoints protegidos. A geração real via provider e a persistência real em MongoDB Atlas dependem de serviços externos não disponíveis nesta sessão.
+As Fases 2.1 a 2.7 possuem contratos e integrações incrementais. A Render Specification pode ser validada no frontend e interpretada por um renderer declarativo seguro, com fallback para o renderer legado. A geração real via provider e a persistência real em MongoDB Atlas dependem de serviços externos não disponíveis nesta sessão.
 
 ## Implemented
 
-A Fase 2.1 — Visual Intelligence — analisa imagens autorizadas da galeria e persiste perfis visuais.
+As Fases 2.1 a 2.6 permanecem implementadas com seus contratos, serviços, persistência e endpoints.
 
-A Fase 2.2 — Reference Intelligence — analisa referências para extrair princípios de design.
+A Fase 2.7 adiciona `isSafeRenderSpec`, que valida a versão, campos fechados, cores hexadecimais, tipos de seção, modos de layout, IDs únicos, referências estruturadas e namespaces permitidos.
 
-A Fase 2.3 — Art Direction — cria direção visual estruturada.
+Foi criado `AISpecRenderer`, que interpreta somente estruturas previamente definidas. Ele não executa HTML, CSS, JavaScript, React, comandos ou código retornado pela IA. O renderer usa componentes React fixos, classes de layout pré-definidas e resolução limitada de referências públicas.
 
-A Fase 2.4 — Design System — cria tokens estruturados e validáveis.
+`LandingPreview` agora aceita uma Render Specification opcional. Quando ela passa a validação, renderiza com `AI_SPEC`; quando está ausente ou inválida, usa automaticamente o renderer `LEGACY` existente. `LandingPreview`, `PublicLanding` e `VisualEditor` foram preservados.
 
-A Fase 2.5 — Layout Plan — define a composição da página por seções, layouts permitidos, conteúdo, interação, motion e responsive.
+O Landing Builder carrega a especificação autenticada mais recente de forma opcional. Se a chamada falhar ou não houver especificação, o preview continua funcionando com LEGACY. A landing pública aceita uma especificação somente se o backend futuramente a fornecer no campo aprovado; como não há aprovação/publicação de AI_SPEC nesta fase, o comportamento público atual permanece LEGACY.
 
-A Fase 2.6 adiciona uma Render Specification declarativa e fechada, que funciona como ponte entre a IA e o renderer. O contrato cobre `version`, `theme`, `typography`, `spacing`, `sections`, `motion`, `interactions`, `responsive`, `media` e `accessibility`.
-
-Cada seção possui tipo permitido, modo de layout permitido, referências estruturadas, tipografia, espaçamento, cores, motion, interação, comportamento responsivo, acessibilidade e fallback. Referências só podem usar os namespaces `landing`, `company`, `media` ou `profile`.
-
-A especificação não aceita HTML, CSS, JavaScript, React, Python, SQL, shell, comandos ou campos desconhecidos. O provider é instruído a retornar somente dados declarativos; a resposta é validada contra `RenderSpecification` antes da persistência.
-
-As especificações são persistidas em `render_specifications` com `request_id`, empresa, usuário, Layout Plan de origem, provider, modelo e timestamp.
+As referências do frontend são resolvidas apenas para campos públicos permitidos da empresa, caminhos editoriais permitidos da landing e imagens da galeria. Propriedades sensíveis não são resolvidas.
 
 ## Files Created
 
-- `backend/ai/render_specification.py`
-- `backend/ai/render_specification_service.py`
-- `tests/test_render_specification.py`
+- `frontend/src/lib/renderSpec.js`
+- `frontend/src/lib/renderSpec.test.js`
+- `frontend/src/components/AISpecRenderer.jsx`
 
 ## Files Modified
 
-- `backend/routes_design.py`
-- `backend/db.py`
+- `frontend/src/components/LandingPreview.jsx`
+- `frontend/src/pages/LandingBuilder.jsx`
+- `frontend/src/pages/PublicLanding.jsx`
 - `state_AI.md`
 
 ## Endpoints Added
 
-- `POST /api/design/generate-render-spec`
-- `GET /api/design/render-spec`
-
-Os endpoints exigem membership ativa e papel `OWNER` ou `MANAGER`. O tenant é obtido da membership autenticada e não é aceito no payload.
+Nenhum endpoint novo foi necessário nesta fase. O frontend reutiliza `GET /api/design/render-spec` criado na Fase 2.6.
 
 ## Database Changes
 
-- Nova coleção lógica `render_specifications`.
-- Novo índice: `render_specifications(company_id, created_at desc)`.
-- Nenhuma migração destrutiva.
-- Nenhuma alteração foi feita no MongoDB nesta sessão.
+Nenhuma alteração de banco nesta fase.
 
 ## Tests
 
+- `CI=true npm test -- --watchAll=false --runInBand`
+- `npm run build`
 - `python3 -m pytest -q`
 - `python3 -m compileall -q backend tests`
-- Importação da aplicação FastAPI com variáveis locais de teste.
-- Verificação dos caminhos OpenAPI.
 - `git diff --check`.
 
 ## Passed
 
-- 30 testes cumulativos das Fases 2.1 a 2.6 passaram.
-- Estrutura declarativa válida é aceita.
-- Campos desconhecidos e código arbitrário são rejeitados.
-- Referências fora dos namespaces permitidos são rejeitadas.
-- IDs de seção duplicados são rejeitados.
-- O payload não aceita `company_id` arbitrário.
-- O contexto exclui campos sensíveis da empresa.
-- Consultas de Layout Plan mantêm o `company_id` autenticado.
+- 3 testes frontend do validador AI_SPEC passaram.
+- O validador rejeita campos extras, referências inseguras e IDs duplicados.
+- O resolver rejeita propriedades sensíveis e só permite campos públicos.
+- 30 testes backend cumulativos passaram.
+- Build frontend passou.
 - Compilação Python passou.
-- Os doze endpoints de design foram registrados.
-- Nenhum segredo foi adicionado ao código.
+- Nenhuma ocorrência de `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function` ou execução de comandos foi adicionada.
 
 ## Failed
 
-- Não foi executada geração real com provider: `EMERGENT_LLM_KEY` não está disponível.
-- Não foi executada persistência real contra MongoDB Atlas: `MONGO_URL` e credenciais do ambiente não estão disponíveis.
+- Não foi executado E2E visual em navegador real.
+- Não foi validado um Render Specification real vindo do provider: `EMERGENT_LLM_KEY` não está disponível.
 - Não foi executado E2E com dois tenants.
 
 ## Known Limitations
 
-A geração depende de um Layout Plan já persistido; quando nenhum `layout_plan_request_id` é informado, o serviço utiliza o Layout Plan mais recente da empresa.
+O renderer AI_SPEC cobre os tipos estruturados previstos, mas não tenta reproduzir todos os detalhes visuais possíveis de uma especificação futura. Motion e interação são interpretados como dados declarativos e não executam comportamento arbitrário nesta fase.
 
-A Render Specification foi criada como contrato backend; a interpretação no frontend e o fallback efetivo `AI_SPEC`/`LEGACY` pertencem à Fase 2.7.
+O endpoint público não expõe automaticamente Render Specifications não aprovadas. O fluxo de Preview/Apply e a separação formal Draft/Preview/Published serão tratados nas Fases 2.8 e 2.9.
 
-O provider existente ainda é usado diretamente; a abstração `AIProvider`/`ClaudeProvider` permanece pendente. As Fases 2.7 a 2.9 não foram iniciadas.
+O build mantém dois warnings preexistentes de dependências de `useEffect` em `frontend/src/pages/Agenda.jsx` e `frontend/src/pages/Clients.jsx`; eles não foram alterados nesta fase.
 
 ## Security Notes
 
-Nenhum `company_id` é aceito no payload. O Layout Plan é consultado com o `company_id` da membership. O contexto permite somente nome, tipo de negócio, descrição e plano validado. Não são incluídos senha, token, cookie, segredo, API key ou dados operacionais. O JSON do provider é validado com schema fechado. Não há execução de código nem referências arbitrárias.
+A whitelist de campos existe no nível superior e nas seções. Referências só aceitam namespaces estruturados. O resolver público de empresa usa uma lista explícita de campos permitidos e não retorna senhas, tokens, cookies, segredos ou API keys. Nenhum código da IA é executado ou injetado no DOM.
 
 ## Performance Notes
 
-A leitura de Render Specifications retorna no máximo vinte registros. A coleção possui índice por tenant e data. A especificação limita seções e referências para manter o payload controlado.
+Imagens do AI_SPEC usam `loading="lazy"`. O renderer usa componentes fixos e classes conhecidas. Falha de validação não bloqueia o preview: o fallback LEGACY é determinístico.
 
 ## Current Pause Point
 
-A Fase 2.6 está pronta para checkpoint após testes locais. O avanço está pausado antes da Fase 2.7 até que o provider, storage e MongoDB sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
+A Fase 2.7 está pronta para checkpoint após testes locais e build. O avanço está pausado antes da Fase 2.8 até que o provider, storage, MongoDB e fluxo visual sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
 
 ## Next Phase
 
-Fase 2.7 — Renderer Integration, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.6.
+Fase 2.8 — Preview Application, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.7.
 
 ## Git Commit
 
-`7a13c96` — `AI Digital Art Director — Phase 2.6 Render Specification`
+`05f40a0` — `AI Digital Art Director — Phase 2.7 Renderer Integration`
 
 ## Timestamp
 
-2026-09-17T22:25:00-03:00
+2026-09-17T22:29:00-03:00

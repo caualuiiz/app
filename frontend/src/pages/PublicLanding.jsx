@@ -25,5 +25,5 @@ export default function PublicLandingPage() {
 
   if (err) return <div className="min-h-screen flex items-center justify-center text-slate-500">{err}</div>;
   if (!data) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-slate-400"/></div>;
-  return <div className="min-h-screen bg-white" data-testid="public-landing"><LandingPreview state={data.state} company={data.company} services={data.services} publicMode resolveUrl={resolveUrl}/></div>;
+  return <div className="min-h-screen bg-white" data-testid="public-landing"><LandingPreview state={data.state} company={data.company} services={data.services} publicMode resolveUrl={resolveUrl} renderSpecification={data.render_specification}/></div>;
 }
