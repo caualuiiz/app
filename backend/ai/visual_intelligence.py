@@ -90,13 +90,14 @@ async def _call_existing_provider(images: list[dict[str, str]], company_context:
     prompt = (
         "Analise somente as imagens fornecidas. Não invente fatos. "
         "Retorne JSON válido com exatamente estes campos: "
-        "dominant_colors, secondary_colors, brightness, contrast, saturation, mood, style, "
+        "dominant_colors, secondary_colors, brightness, contrast, saturation, mood, style, image_insights, "
         "environment, composition, subject, materials, lighting, luxury_level, minimalism_level, "
-        "visual_density, photographic_characteristics, confidence. "
+        "visual_density, photographic_characteristics, confidence. image_insights deve ser uma lista de objetos, um por imagem, contendo image_path, likely_role, strengths, recommended_sections, treatment e confidence. "
         "brightness, contrast, saturation, luxury_level, minimalism_level, visual_density e confidence "
         "são números entre 0 e 1. Use null quando não for possível observar. "
-        f"Contexto não factual adicional do negócio: {company_context}"
+        f"Contexto não factual adicional do negócio: {company_context}. Manifesto das imagens: {manifest}. Use exatamente os image_path do manifesto."
     )
+    manifest = json.dumps([{"index": index + 1, "image_path": image["path"]} for index, image in enumerate(images)], ensure_ascii=False)
     contents = [ImageContent(image_base64=image["data"]) for image in images]
     try:
         chat = LlmChat(
