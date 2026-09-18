@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-from fastapi import APIRouter, FastAPI  # noqa: E402
+from fastapi import APIRouter, FastAPI, HTTPException  # noqa: E402
 from starlette.middleware.cors import CORSMiddleware  # noqa: E402
 
 from db import close_db, create_indexes, get_db  # noqa: E402
@@ -55,9 +55,9 @@ async def health():
     try:
         await db.command("ping")
         return {"status": "ok"}
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Health check database ping failed")
-        return {"status": "degraded"}
+        raise HTTPException(status_code=503, detail="Banco de dados indisponível") from exc
 
 
 api_router.include_router(auth_router)
@@ -79,11 +79,14 @@ api_router.include_router(whatsapp_router)
 app.include_router(api_router)
 
 frontend_url = os.environ.get("FRONTEND_URL", "").strip()
+environment = os.environ.get("ENVIRONMENT", "development").strip().lower()
+if environment == "production" and not frontend_url:
+    raise RuntimeError("FRONTEND_URL deve ser configurado em produção")
 allowed_origins = [o for o in [frontend_url, "http://localhost:3000"] if o]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=allowed_origins or ["*"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
