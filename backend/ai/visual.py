@@ -55,7 +55,7 @@ class VisualProfileResponse(BaseModel):
     image_count: int = Field(ge=1)
     image_paths: list[str] = Field(max_length=8)
     analysis: VisualAnalysis
-    provider: Literal["existing"]
+    provider: Literal["openai"]
     model: str
     created_at: str
 
