@@ -80,7 +80,6 @@ async def create_membership(
             "status": "ACTIVE",
             "created_at": now,
             "updated_at": now,
-            "temporary_password": tmp_password,  # visible to OWNER once
         })
         user = await db.users.find_one({"_id": result.inserted_id})
 
