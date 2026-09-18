@@ -47,7 +47,12 @@ O agente não aprende com clientes. Analisa os dados de cada negócio e decide c
 - Nenhuma chave real versionada.
 - Uploads migrados para MongoDB GridFS, sem dependência obrigatória do storage legado Emergent.
 - Compatibilidade de leitura legada preservada quando `EMERGENT_LLM_KEY` estiver presente durante a migração.
-- CI verde no commit `801dcfa825ec941cd1b593e9c3a57a02ba1f176` (backend + frontend).
+- CI verde anteriormente no commit `801dcfa825ec941cd1b593e9c3a57a02ba1f176` (backend + frontend).
+- Workflow de CI limpo, sem diagnóstico temporário de AJV.
+- Render frontend corrigido com `rootDir: frontend` e `staticPublishPath: build`.
+- Render configurado com `ENVIRONMENT=production` e `WHATSAPP_APP_SECRET`.
+- CORS de produção exige `FRONTEND_URL` e não utiliza wildcard.
+- Health check retorna HTTP 503 quando o MongoDB está indisponível.
 
 ## Produção
 
@@ -80,7 +85,7 @@ Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-A `main` está validada pelo CI e o storage de uploads já não depende do serviço legado.
+A `main` está com o hardening de produção aplicado e o storage de uploads já não depende do serviço legado.
 
 Próximos passos técnicos:
 1. aplicar `render.yaml` no Render;
