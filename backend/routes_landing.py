@@ -144,69 +144,56 @@ Campos possíveis do state_patch: hero.title, hero.subtitle, hero.description, h
 Retorne 2-4 sugestões curtas de próximas ações que o usuário pode clicar (ex: "Deixar mais moderno", "Trocar cor primária", "Adicionar diferencial")."""
 
 async def _run_llm(company_id: str, message: str, image_paths: list[str] | None = None):
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    from ai.openai_runtime import OpenAIExecutionError, generate_json
     db = get_db()
     doc = await _get_or_create(company_id)
     messages = doc.get("messages", [])
     state = doc.get("state") or DEFAULT_STATE.copy()
     company = await db.companies.find_one({"_id": _oid(company_id)})
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key: raise HTTPException(503, "IA indisponível")
 
     ctx_state = {k: state.get(k) for k in ["hero", "about", "differentiators", "style", "contact", "sections"]}
-    context = f"State atual: {json.dumps(ctx_state, ensure_ascii=False)}\nEmpresa: {company['name']} ({company['business_type']})\n\nUsuário: {message}"
+    history = messages[-10:]
+    context = (
+        f"State atual: {json.dumps(ctx_state, ensure_ascii=False)}\n"
+        f"Empresa: {company.get("name")} ({company.get("business_type")})\n"
+        f"Histórico recente: {json.dumps(history, ensure_ascii=False)}\n\n"
+        f"Usuário: {message}"
+    )
 
-    session_id = f"landing-{company_id}"
-    chat = LlmChat(api_key=key, session_id=session_id, system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o-mini")
-    for msg in messages[-10:]:
-        if msg["role"] in ("user", "assistant"):
-            chat.messages.append({"role": msg["role"], "content": msg["content"]})
-
-    # Attach images (multi-modal) if provided
-    file_contents = None
-    if image_paths:
+    images = []
+    for path in (image_paths or [])[:8]:
         try:
-            from emergentintegrations.llm.chat import ImageContent
-            file_contents = []
-            for p in image_paths[:4]:
-                try:
-                    data, _ = get_object(p)
-                    b64 = base64.b64encode(data).decode()
-                    file_contents.append(ImageContent(image_base64=b64))
-                except Exception: pass
+            data, content_type = get_object(path)
+            images.append({"data": base64.b64encode(data).decode(), "content_type": content_type})
         except Exception:
-            file_contents = None
+            pass
 
     try:
-        um = UserMessage(text=context, file_contents=file_contents) if file_contents else UserMessage(text=context)
-        raw = await chat.send_message(um)
-    except Exception as e:
-        raise HTTPException(502, f"IA falhou: {e}")
+        parsed = await generate_json(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=context,
+            images=images,
+            model=os.environ.get("LANDING_BRAIN_MODEL", "gpt-5.6-luna"),
+        )
+    except OpenAIExecutionError as exc:
+        raise HTTPException(503, f"IA indisponível: {exc}") from exc
 
-    reply_text, patch, ask_photos, suggestions = raw, {}, False, []
-    try:
-        s = raw.strip()
-        if s.startswith("```"): s = s.split("```", 2)[1].lstrip("json").strip()
-        parsed = json.loads(s)
-        reply_text = parsed.get("reply", raw)
-        patch = parsed.get("state_patch", {}) or {}
-        ask_photos = bool(parsed.get("ask_photos", False))
-        suggestions = parsed.get("suggestions") or []
-    except Exception:
-        pass
+    reply_text = parsed.get("reply") or "Entendi. Vou ajustar a página com base nisso."
+    patch = parsed.get("state_patch") or {}
+    ask_photos = bool(parsed.get("ask_photos", False))
+    suggestions = parsed.get("suggestions") or []
 
     def merge(base, upd):
         for k, v in upd.items():
-            if isinstance(v, dict) and isinstance(base.get(k), dict): merge(base[k], v)
-            else: base[k] = v
+            if isinstance(v, dict) and isinstance(base.get(k), dict):
+                merge(base[k], v)
+            else:
+                base[k] = v
     merge(state, patch)
-
     messages.append({"role": "user", "content": message, "at": _now()})
     messages.append({"role": "assistant", "content": reply_text, "at": _now(), "suggestions": suggestions})
-    await db.landing_pages.update_one({"company_id": company_id},
-                                      {"$set": {"messages": messages, "state": state, "updated_at": _now()}})
+    await db.landing_pages.update_one({"company_id": company_id}, {"$set": {"messages": messages, "state": state, "updated_at": _now()}})
     return {"reply": reply_text, "state": state, "ask_photos": ask_photos, "messages": messages, "suggestions": suggestions}
-
 
 class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
