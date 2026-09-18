@@ -12,6 +12,7 @@ from auth import get_current_user, is_valid_object_id, require_membership, requi
 from db import get_db
 from storage import build_upload_path, get_object, put_object
 from routes_domains import resolve_custom_domain
+from feature_limits import enforce_limit
 
 router = APIRouter(prefix="/landing", tags=["landing"])
 public_router = APIRouter(prefix="/public", tags=["public"])
@@ -80,13 +81,14 @@ async def publish(m=Depends(require_roles("OWNER", "MANAGER"))):
 
 @router.post("/me/gallery")
 async def upload_gallery(file: UploadFile = File(...), m=Depends(require_roles("OWNER", "MANAGER"))):
+    db = get_db()
+    await enforce_limit(db, m["company_id"], "files", "imagens da galeria", "max_gallery_images")
     if file.content_type not in {"image/jpeg", "image/png", "image/webp", "image/gif"}:
         raise HTTPException(400, "Formato não suportado")
     data = await file.read()
     if len(data) > 6 * 1024 * 1024: raise HTTPException(413, "Máximo 6MB")
     path = build_upload_path(m["company_id"], file.filename or "img.jpg")
     result = put_object(path, data, file.content_type)
-    db = get_db()
     await db.files.insert_one({"storage_path": result["path"], "company_id": m["company_id"],
                                "uploaded_by": m["user_id"], "content_type": file.content_type,
                                "kind": "landing_gallery", "is_deleted": False, "created_at": _now()})
