@@ -16,7 +16,7 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false
-      - key: EMERGENT_LLM_KEY
+      - key: OPENAI_API_KEY
         sync: false
       - key: LANDING_BRAIN_MODEL
         value: gpt-4o-mini
@@ -46,7 +46,7 @@ services:
   - type: web
     name: saas-frontend
     runtime: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: frontend/build
     autoDeployTrigger: checksPass
     routes:
