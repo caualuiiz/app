@@ -2,126 +2,57 @@
 
 ## Current Phase
 
-Fase 2.9 — Apply Design
+Fase 3.1 — Quality Assurance e Testes de Integração End-to-End
 
 ## Status
 
-IMPLEMENTED WITH LIMITATIONS
+PASSOU EM AMBIENTE LOCAL COM LIMITAÇÕES DE AMBIENTE
 
-As Fases 2.1 a 2.9 possuem contratos e integrações incrementais. A sequência completa de Digital Art Director possui análise, direção, sistema de design, layout, especificação declarativa, renderer, preview e aplicação controlada ao Draft.
+As Fases 2.1 a 2.9 possuem contratos, backend, frontend e testes locais. A Fase 3.1 verificou a compatibilidade do ciclo Render Specification → Preview → Apply com isolamento de tenant, expiração, idempotência, versionamento e separação entre Draft e Published.
 
-## Implemented
+## QA Executado
 
-As Fases 2.1 a 2.8 permanecem implementadas com seus contratos, serviços, persistência, renderer AI_SPEC/LEGACY e Preview Sessions.
+Foi criado `tests/test_phase31_integration.py`, com bancos company-scoped em memória e execução do fluxo completo de criação de Preview e aplicação ao Draft.
 
-A Fase 2.9 adiciona `ApplyDesignRequest` com `preview_id`, `request_id` obrigatório para idempotência e `expected_draft_version` opcional para controle otimista de concorrência.
+O teste integrado confirma incremento de `draft_version`, snapshot em `draft_versions`, decisão em `landing_decisions`, Preview `APPLIED`, `state.is_published` preservado como `false`, isolamento entre tenants, idempotência do mesmo request, rejeição de versão obsoleta e rejeição de Preview expirado.
 
-O serviço valida que o Preview pertence à empresa autenticada, está em estado `CREATED` ou `ACTIVE` e não expirou. A Render Specification é validada novamente antes de ser aplicada.
+O harness assíncrono usa `asyncio.run` da biblioteca padrão. Não foi adicionada dependência de pytest.
 
-A aplicação grava a especificação em `landing_pages.draft_render_spec`, incrementa `landing_pages.draft_version` e atualiza `draft_updated_at`. O campo `state.is_published` não é alterado e não existe publicação automática.
+## Resultados
 
-Antes da aplicação, o serviço verifica a versão esperada. O update do Draft usa filtro de versão atual para impedir que duas aplicações concorrentes sobrescrevam a mesma versão. Conflitos retornam HTTP 409.
+- `python3 -m pytest -q`: 40 passed, 1 warning.
+- `python3 -m compileall -q backend tests`: PASS.
+- `git diff --check`: PASS.
+- `CI=true npm test -- --watchAll=false --runInBand`: 3 passed.
+- `npm run build`: PASS.
 
-Cada aplicação cria um snapshot em `draft_versions`, contendo versão anterior, versão nova, Preview, request, usuário, especificação anterior e nova especificação. Também cria uma decisão auditável em `landing_decisions` com operação `APPLY_DESIGN`.
+O build mantém dois warnings preexistentes de dependências de `useEffect` em `frontend/src/pages/Agenda.jsx` e `frontend/src/pages/Clients.jsx`.
 
-Repetições com o mesmo `company_id` e `request_id` retornam a decisão existente com `idempotent=true`. Requests diferentes contra um Draft alterado falham com conflito de versão.
+## QA Coverage
 
-O Preview é marcado como `APPLIED` após a aplicação. Estados expirados, cancelados ou já aplicados não podem ser aplicados novamente.
+As Fases 2.1–2.9 foram inventariadas no relatório `RELATORIO_QA_FASE_3_1.md`. A cobertura inclui contratos estruturados, whitelist, tenant, Draft, Preview, Apply, expiração, idempotência e concorrência otimista.
 
-## Files Created
+## Security Verification
 
-- `backend/ai/design_application.py`
-- `backend/ai/design_application_service.py`
-- `tests/test_design_application.py`
+Os testes não apagam dados, não executam comandos e não usam banco real. Consultas de Preview e Apply mantêm `company_id` autenticado. O Apply não altera `is_published` e não publica automaticamente.
 
-## Files Modified
+## Limitations
 
-- `backend/routes_design.py`
-- `backend/db.py`
-- `frontend/src/pages/LandingBuilder.jsx`
-- `state_AI.md`
+Não foi executado E2E em navegador real, MongoDB Atlas, provider de IA ou dois processos concorrentes reais. A atomicidade multi-documento entre Draft, snapshot, decisão e Preview ainda requer transação MongoDB em replica set.
 
-## Endpoint Added
+## Artifacts
 
-- `POST /api/design/apply-preview`
-
-O endpoint exige membership ativa e papel `OWNER` ou `MANAGER`. O tenant é obtido da membership autenticada e não é aceito no payload.
-
-## Frontend Integration
-
-O Landing Builder recebeu a ação explícita `Aplicar ao Draft`. Ela só fica habilitada após a criação de uma Preview Session. A ação atualiza a prévia local com a especificação aplicada e informa que o Draft foi alterado sem publicar. O botão `Publicar` permanece separado.
-
-## Database Changes
-
-- Campo `draft_render_spec` em `landing_pages`.
-- Campo incremental `draft_version` em `landing_pages`.
-- Campo `draft_updated_at` em `landing_pages`.
-- Nova coleção lógica `draft_versions` para snapshots.
-- Nova coleção lógica `landing_decisions` para auditoria.
-- Índice único `landing_decisions(company_id, request_id)`.
-- Índice único `draft_versions(company_id, version)`.
-- Nenhuma migração destrutiva.
-- Nenhuma alteração foi feita no MongoDB nesta sessão.
-
-## Tests
-
-- `python3 -m pytest -q`
-- `python3 -m compileall -q backend tests`
-- `CI=true npm test -- --watchAll=false --runInBand`
-- `npm run build`
-- Importação da aplicação FastAPI e verificação dos caminhos OpenAPI.
-- `git diff --check`.
-
-## Passed
-
-- 37 testes backend cumulativos passaram.
-- 3 testes frontend passaram.
-- Request de Apply exige Preview e request idempotente.
-- Campos desconhecidos e versões negativas são rejeitados.
-- Filtro de Draft preserva o `company_id` e a versão esperada.
-- A resposta de Apply sempre declara `published=false`.
-- Build frontend passou.
-- Compilação Python passou.
-- O endpoint `apply-preview` foi registrado.
-- Nenhuma publicação automática foi adicionada.
-
-## Failed
-
-- Não foi executado E2E visual em navegador real.
-- Não foi validado Apply contra MongoDB real ou transação distribuída.
-- Não foi executado E2E com dois tenants concorrentes.
-- Não foi validado um Render Specification real vindo do provider: `EMERGENT_LLM_KEY` não está disponível.
-
-## Known Limitations
-
-O Apply grava Draft, snapshots e decisão em operações sequenciais. O filtro otimista impede sobrescrita concorrente, mas uma transação MongoDB multi-documento deverá ser habilitada em ambiente de produção com replica set para atomicidade completa entre Draft, snapshot, decisão e status do Preview.
-
-A reversão visual de snapshots ainda não possui endpoint próprio. Os snapshots e versões ficam disponíveis para a próxima evolução de histórico/rollback.
-
-A publicação continua sendo uma ação separada do Apply. O endpoint de publicação legado não foi alterado nesta fase.
-
-O build mantém dois warnings preexistentes de dependências de `useEffect` em `Agenda.jsx` e `Clients.jsx`; eles não foram alterados nesta fase.
-
-## Security Notes
-
-Todas as consultas incluem `company_id` autenticado. `preview_id` e `request_id` não substituem o filtro de tenant. O Apply valida status, expiração e Render Specification antes de gravar. Nenhum segredo, token, cookie ou campo de outra empresa entra no Draft. `is_published` não é alterado pelo Apply.
-
-## Performance Notes
-
-O Apply usa índices por tenant/request e tenant/version. A especificação é validada antes da gravação. A resposta retorna apenas a especificação aplicada e metadados da decisão.
+- `tests/test_phase31_integration.py`
+- `RELATORIO_QA_FASE_3_1.md`
 
 ## Current Pause Point
 
-A implementação das Fases 2.1–2.9 está concluída em nível de contrato, backend, frontend e testes locais. O próximo passo recomendado é configurar provider/MongoDB real e executar E2E multi-tenant antes de qualquer evolução de rollback, transações ou publicação AI_SPEC.
-
-## Next Phase
-
-Nenhuma nova fase 2.x foi iniciada. A arquitetura está pausada após a Fase 2.9 para validação integrada.
+A Fase 3.1 está pronta para checkpoint. O próximo passo recomendado é validação integrada em ambiente configurado, seguida de E2E visual real, teste multi-tenant distribuído, transação MongoDB e rollback.
 
 ## Git Commit
 
-`9add32e` — `AI Digital Art Director — Phase 2.9 Apply Design`
+`6fd8f2e` — `QA — Phase 3.1 End-to-End Integration Tests`
 
 ## Timestamp
 
-2026-09-17T22:38:00-03:00
+2026-09-17T22:46:00-03:00
