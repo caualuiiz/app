@@ -54,6 +54,7 @@ services:
   - type: web
     name: saas-frontend
     runtime: static
+    rootDir: frontend
     buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: frontend/build
     autoDeployTrigger: checksPass
