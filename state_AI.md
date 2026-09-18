@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Fase 7 — Pré-deploy comercial concluído em código
+Fase 8 — Hardening de produção e preparação de deploy
 
 ## Status
 
-CÓDIGO COMERCIAL CONSOLIDADO; DEPLOY REAL BLOQUEADO APENAS POR CONFIGURAÇÃO EXTERNA DE INFRAESTRUTURA
+CÓDIGO COMERCIAL CONSOLIDADO; HARDENING DE PRODUÇÃO EM ANDAMENTO
 
 ## Núcleo
 
@@ -45,6 +45,9 @@ O agente não aprende com clientes. Analisa os dados de cada negócio e decide c
 - CI para backend/frontend.
 - Blueprint Render para API, frontend e cron.
 - Nenhuma chave real versionada.
+- Uploads migrados para MongoDB GridFS, sem dependência obrigatória do storage legado Emergent.
+- Compatibilidade de leitura legada preservada quando `EMERGENT_LLM_KEY` estiver presente durante a migração.
+- CI verde no commit `801dcfa825ec941cd1b593e9c3a57a02ba1f176` (backend + frontend).
 
 ## Produção
 
@@ -59,9 +62,9 @@ Render documenta web/static/cron services em Blueprints e custom domains por ser
 
 ## Validação
 
-O workflow de CI foi configurado para pull requests, com cancelamento de execuções obsoletas.
+O workflow de CI executa backend e frontend em pushes/PRs para `main`, com cancelamento de execuções obsoletas.
 
-No momento do checkpoint, o GitHub Actions estava mantendo o último workflow em fila e o commit não apresentava status de falha. Isso é uma limitação do runner externo, não uma confirmação de teste verde.
+Última validação confirmada: run `35308757341`, commit `801dcfa825ec941cd1b593e9c3a57a02ba1f176`, backend `success`, frontend `success`.
 
 ## Deploy real
 
@@ -77,15 +80,16 @@ Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-Código consolidado na `main` e preparado para produção.
+A `main` está validada pelo CI e o storage de uploads já não depende do serviço legado.
 
-Após conectar a infraestrutura externa:
-1. aplicar `render.yaml`;
-2. preencher secrets;
+Próximos passos técnicos:
+1. aplicar `render.yaml` no Render;
+2. preencher secrets externos;
 3. deploy;
-4. smoke test;
-5. conectar primeiro domínio;
-6. executar E2E com cliente real.
+4. smoke test de API/frontend;
+5. configurar Stripe/WhatsApp/OpenAI;
+6. conectar primeiro domínio;
+7. executar E2E com cliente real.
 
 ## Timestamp
 
