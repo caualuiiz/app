@@ -7,9 +7,10 @@ from typing import Any
 
 from .decision import StructuredDecision
 from .professional_brain import build_system_prompt
+from .reasoning_engine import ReasoningEngine
 
 
-class LandingBrain:
+class LandingBrain(ReasoningEngine):
     name = "landing-brain"
     version = "1.0"
 
