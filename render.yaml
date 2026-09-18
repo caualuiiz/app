@@ -16,6 +16,8 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false
+      - key: ENVIRONMENT
+        value: production
       - key: OPENAI_API_KEY
         sync: false
       - key: LANDING_BRAIN_MODEL
@@ -25,6 +27,8 @@ services:
       - key: WHATSAPP_API_VERSION
         sync: false
       - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
         sync: false
       - key: WHATSAPP_TEMPLATE_NEW_BOOKING
         sync: false
