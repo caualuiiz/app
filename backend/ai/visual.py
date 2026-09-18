@@ -6,6 +6,17 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class VisualImageInsight(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    image_path: str = Field(min_length=1, max_length=300)
+    likely_role: Literal["hero", "environment", "service", "process", "detail", "proof", "support", "gallery"]
+    strengths: list[str] = Field(default_factory=list, max_length=8)
+    recommended_sections: list[str] = Field(default_factory=list, max_length=8)
+    treatment: str = Field(default="", max_length=240)
+    confidence: float = Field(default=0, ge=0, le=1)
+
+
 class VisualAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -25,6 +36,7 @@ class VisualAnalysis(BaseModel):
     minimalism_level: float | None = Field(default=None, ge=0, le=1)
     visual_density: float | None = Field(default=None, ge=0, le=1)
     photographic_characteristics: list[str] = Field(default_factory=list, max_length=12)
+    image_insights: list[VisualImageInsight] = Field(default_factory=list, max_length=8)
     confidence: float = Field(default=0, ge=0, le=1)
 
 
