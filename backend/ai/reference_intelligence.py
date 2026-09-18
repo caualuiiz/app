@@ -16,11 +16,7 @@ from .reference import (
     ReferenceAnalysis,
     ReferenceProfileResponse,
 )
-from .visual_intelligence import (
-    MODEL_NAME,
-    _call_existing_provider,
-    _load_image_inputs,
-)
+from .visual_intelligence import MODEL_NAME, _load_image_inputs
 
 MAX_IMAGES = 8
 
