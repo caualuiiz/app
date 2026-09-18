@@ -11,3 +11,7 @@ class ReasoningEngine(ABC):
     @abstractmethod
     async def decide(self, *, context: dict[str, Any]) -> StructuredDecision:
         raise NotImplementedError
+
+
+    async def build_blueprint(self, *, context: dict[str, Any]):
+        raise NotImplementedError
