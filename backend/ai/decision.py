@@ -39,7 +39,7 @@ class StructuredDecision(BaseModel):
 
 class AIDecisionResponse(BaseModel):
     request_id: str
-    provider: str
+    agent: str
     model: str | None = None
     decision: StructuredDecision
     created_at: str
