@@ -27,6 +27,8 @@ export default function LandingBuilderPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [creatingPreview, setCreatingPreview] = useState(false);
   const [applyingPreview, setApplyingPreview] = useState(false);
+  const [critiquing, setCritiquing] = useState(false);
+  const [critique, setCritique] = useState(null);
   const [tab, setTab] = useState("chat");
   const fileRef = useRef(null);
   const scrollRef = useRef(null);
@@ -93,6 +95,23 @@ export default function LandingBuilderPage() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
+  const runCritique = async () => {
+    if (!data?.previewId) return;
+    setCritiquing(true);
+    try {
+      const { data: result } = await api.post("/design/critique-preview", null, {
+        params: { preview_id: data.previewId },
+      });
+      setCritique(result);
+      if (result.critique?.ready_for_publish) {
+        toast.success("Autocrítica concluída: página pronta para publicação");
+      } else {
+        toast.warning("A IA encontrou pontos para corrigir antes da publicação");
+      }
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setCritiquing(false); }
+  };
+
   const createPreview = async () => {
     setCreatingPreview(true);
     try {
@@ -133,9 +152,27 @@ export default function LandingBuilderPage() {
             <Button variant="outline" asChild data-testid="view-public-btn"><a href={publicUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2"/>Visualizar</a></Button>
             <Button variant="outline" onClick={createPreview} disabled={creatingPreview} data-testid="create-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{creatingPreview ? "Gerando..." : "Gerar Preview"}</Button>
             <Button variant="outline" onClick={applyPreview} disabled={!data?.previewId || applyingPreview} data-testid="apply-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{applyingPreview ? "Aplicando..." : "Aplicar ao Draft"}</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
+            <Button variant="outline" onClick={runCritique} disabled={!data?.previewId || critiquing} data-testid="critique-preview-btn"><Sparkles className="h-4 w-4 mr-2"/>{critiquing ? "Analisando..." : "Criticar Preview"}</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} disabled={!critique?.critique?.ready_for_publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
           </div>
         </div>
+
+        {critique?.critique && (
+          <div className="mb-3 rounded-xl border border-slate-200 bg-white p-4" data-testid="landing-critique">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="font-semibold text-sm">Revisão profissional da IA</div>
+              <Badge className={critique.critique.ready_for_publish ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                {critique.critique.ready_for_publish ? "Pronta para publicar" : "Precisa de ajustes"}
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">{critique.critique.overall_assessment}</p>
+            {critique.critique.priority_actions?.length > 0 && (
+              <div className="text-xs text-slate-600">
+                <strong>Prioridades:</strong> {critique.critique.priority_actions.slice(0, 3).join(" • ")}
+              </div>
+            )}
+          </div>
+        )}
 
         <Tabs value={tab} onValueChange={setTab} className="md:hidden mb-3">
           <TabsList className="w-full"><TabsTrigger value="chat" className="flex-1">Chat</TabsTrigger><TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger></TabsList>
