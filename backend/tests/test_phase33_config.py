@@ -1,5 +1,3 @@
-import os
-
 from ai.config import ConfigurationError, get_ai_config
 
 
