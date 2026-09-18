@@ -43,6 +43,7 @@ function App() {
           </Route>
 
           <Route path="/:slug" element={<PublicLandingPage />} />
+          <Route path="/agendar" element={<PublicBookingPage />} />
           <Route path="/:slug/agendar" element={<PublicBookingPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
