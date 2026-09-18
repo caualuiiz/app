@@ -10,6 +10,8 @@ from ai.design_system import DesignSystemListResponse, DesignSystemResponse, Gen
 from ai.design_system_service import generate_design_system, list_design_systems
 from ai.layout_plan import GenerateLayoutPlanRequest, LayoutPlanListResponse, LayoutPlanResponse
 from ai.layout_plan_service import generate_layout_plan, list_layout_plans
+from ai.render_specification import GenerateRenderSpecRequest, RenderSpecificationListResponse, RenderSpecificationResponse
+from ai.render_specification_service import generate_render_spec, list_render_specs
 from ai.reference import AnalyzeReferencesRequest, ReferenceProfileListResponse, ReferenceProfileResponse
 from ai.reference_intelligence import analyze_references, list_profiles as list_reference_profiles
 from ai.visual import AnalyzeImagesRequest, VisualProfileListResponse, VisualProfileResponse
@@ -66,3 +68,13 @@ async def generate_layout_plan_route(payload: GenerateLayoutPlanRequest, m=Depen
 @router.get("/layout-plan", response_model=LayoutPlanListResponse)
 async def get_layout_plans(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"plans": await list_layout_plans(m["company_id"])}
+
+
+@router.post("/generate-render-spec", response_model=RenderSpecificationResponse)
+async def generate_render_spec_route(payload: GenerateRenderSpecRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await generate_render_spec(m["company_id"], m["user_id"], payload)
+
+
+@router.get("/render-spec", response_model=RenderSpecificationListResponse)
+async def get_render_specs(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return {"specifications": await list_render_specs(m["company_id"])}

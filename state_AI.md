@@ -2,37 +2,39 @@
 
 ## Current Phase
 
-Fase 2.5 — Layout Plan
+Fase 2.6 — Render Specification
 
 ## Status
 
 IMPLEMENTED WITH LIMITATIONS
 
-As Fases 2.1 a 2.5 possuem contratos fechados, contexto company-scoped, persistência e endpoints protegidos. A geração real via provider e a persistência real em MongoDB Atlas dependem de serviços externos não disponíveis nesta sessão.
+As Fases 2.1 a 2.6 possuem contratos fechados, contexto company-scoped, persistência e endpoints protegidos. A geração real via provider e a persistência real em MongoDB Atlas dependem de serviços externos não disponíveis nesta sessão.
 
 ## Implemented
 
 A Fase 2.1 — Visual Intelligence — analisa imagens autorizadas da galeria e persiste perfis visuais.
 
-A Fase 2.2 — Reference Intelligence — analisa URL, descrição e imagens autorizadas para extrair princípios de design.
+A Fase 2.2 — Reference Intelligence — analisa referências para extrair princípios de design.
 
-A Fase 2.3 — Art Direction — cria uma direção visual estruturada específica para o negócio.
+A Fase 2.3 — Art Direction — cria direção visual estruturada.
 
-A Fase 2.4 — Design System — cria tokens estruturados e validáveis para cores, tipografia, spacing, radius, grid, motion, visual e responsive.
+A Fase 2.4 — Design System — cria tokens estruturados e validáveis.
 
-A Fase 2.5 adiciona um Layout Plan estruturado e derivado do Design System. Cada seção possui `id`, propósito, modo de layout, fonte de conteúdo, tratamento visual, interação, motion e comportamento responsive. Os IDs de seção são únicos e os modos permitidos são uma enumeração fechada de experiências suportadas.
+A Fase 2.5 — Layout Plan — define a composição da página por seções, layouts permitidos, conteúdo, interação, motion e responsive.
 
-O contrato também inclui ritmo da página, estratégia responsive, acessibilidade, performance, confiança e avisos. A geração não força um padrão repetitivo de cards e não permite layout arbitrário.
+A Fase 2.6 adiciona uma Render Specification declarativa e fechada, que funciona como ponte entre a IA e o renderer. O contrato cobre `version`, `theme`, `typography`, `spacing`, `sections`, `motion`, `interactions`, `responsive`, `media` e `accessibility`.
 
-O contexto enviado ao provider inclui somente dados públicos mínimos da empresa e o Design System validado da mesma empresa. A resposta é validada contra `LayoutPlan` antes da persistência.
+Cada seção possui tipo permitido, modo de layout permitido, referências estruturadas, tipografia, espaçamento, cores, motion, interação, comportamento responsivo, acessibilidade e fallback. Referências só podem usar os namespaces `landing`, `company`, `media` ou `profile`.
 
-Os planos são persistidos em `layout_plans` com `request_id`, empresa, usuário, Design System de origem, provider, modelo e timestamp.
+A especificação não aceita HTML, CSS, JavaScript, React, Python, SQL, shell, comandos ou campos desconhecidos. O provider é instruído a retornar somente dados declarativos; a resposta é validada contra `RenderSpecification` antes da persistência.
+
+As especificações são persistidas em `render_specifications` com `request_id`, empresa, usuário, Layout Plan de origem, provider, modelo e timestamp.
 
 ## Files Created
 
-- `backend/ai/layout_plan.py`
-- `backend/ai/layout_plan_service.py`
-- `tests/test_layout_plan.py`
+- `backend/ai/render_specification.py`
+- `backend/ai/render_specification_service.py`
+- `tests/test_render_specification.py`
 
 ## Files Modified
 
@@ -42,15 +44,15 @@ Os planos são persistidos em `layout_plans` com `request_id`, empresa, usuário
 
 ## Endpoints Added
 
-- `POST /api/design/generate-layout-plan`
-- `GET /api/design/layout-plan`
+- `POST /api/design/generate-render-spec`
+- `GET /api/design/render-spec`
 
 Os endpoints exigem membership ativa e papel `OWNER` ou `MANAGER`. O tenant é obtido da membership autenticada e não é aceito no payload.
 
 ## Database Changes
 
-- Nova coleção lógica `layout_plans`.
-- Novo índice: `layout_plans(company_id, created_at desc)`.
+- Nova coleção lógica `render_specifications`.
+- Novo índice: `render_specifications(company_id, created_at desc)`.
 - Nenhuma migração destrutiva.
 - Nenhuma alteração foi feita no MongoDB nesta sessão.
 
@@ -64,15 +66,16 @@ Os endpoints exigem membership ativa e papel `OWNER` ou `MANAGER`. O tenant é o
 
 ## Passed
 
-- 23 testes cumulativos das Fases 2.1 a 2.5 passaram.
-- Layouts válidos são aceitos.
+- 30 testes cumulativos das Fases 2.1 a 2.6 passaram.
+- Estrutura declarativa válida é aceita.
+- Campos desconhecidos e código arbitrário são rejeitados.
+- Referências fora dos namespaces permitidos são rejeitadas.
 - IDs de seção duplicados são rejeitados.
-- Modos de layout não permitidos são rejeitados.
 - O payload não aceita `company_id` arbitrário.
 - O contexto exclui campos sensíveis da empresa.
-- Consultas de Design System mantêm o `company_id` autenticado.
+- Consultas de Layout Plan mantêm o `company_id` autenticado.
 - Compilação Python passou.
-- Os dez endpoints de design foram registrados.
+- Os doze endpoints de design foram registrados.
 - Nenhum segredo foi adicionado ao código.
 
 ## Failed
@@ -83,32 +86,32 @@ Os endpoints exigem membership ativa e papel `OWNER` ou `MANAGER`. O tenant é o
 
 ## Known Limitations
 
-A geração depende de um Design System já persistido; quando nenhum `design_system_request_id` é informado, o serviço utiliza o Design System mais recente da empresa.
+A geração depende de um Layout Plan já persistido; quando nenhum `layout_plan_request_id` é informado, o serviço utiliza o Layout Plan mais recente da empresa.
 
-O provider existente ainda é usado diretamente; a abstração `AIProvider`/`ClaudeProvider` permanece pendente para etapa posterior. Não há frontend específico para os novos endpoints nesta fase.
+A Render Specification foi criada como contrato backend; a interpretação no frontend e o fallback efetivo `AI_SPEC`/`LEGACY` pertencem à Fase 2.7.
 
-As Fases 2.6 a 2.9 não foram iniciadas.
+O provider existente ainda é usado diretamente; a abstração `AIProvider`/`ClaudeProvider` permanece pendente. As Fases 2.7 a 2.9 não foram iniciadas.
 
 ## Security Notes
 
-Nenhum `company_id` é aceito no payload. O Design System é sempre consultado com o `company_id` da membership. O contexto permite somente nome, tipo de negócio, descrição e tokens validados. Não são incluídos senha, token, cookie, segredo, API key ou dados operacionais. O JSON do provider é validado com schema fechado e os modos de layout são enumerados.
+Nenhum `company_id` é aceito no payload. O Layout Plan é consultado com o `company_id` da membership. O contexto permite somente nome, tipo de negócio, descrição e plano validado. Não são incluídos senha, token, cookie, segredo, API key ou dados operacionais. O JSON do provider é validado com schema fechado. Não há execução de código nem referências arbitrárias.
 
 ## Performance Notes
 
-A leitura de Layout Plans retorna no máximo vinte registros. A coleção possui índice por tenant e data. O contexto contém somente dados editoriais e tokens necessários.
+A leitura de Render Specifications retorna no máximo vinte registros. A coleção possui índice por tenant e data. A especificação limita seções e referências para manter o payload controlado.
 
 ## Current Pause Point
 
-A Fase 2.5 está pronta para checkpoint após testes locais. O avanço está pausado antes da Fase 2.6 até que o provider, storage e MongoDB sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
+A Fase 2.6 está pronta para checkpoint após testes locais. O avanço está pausado antes da Fase 2.7 até que o provider, storage e MongoDB sejam validados em ambiente configurado ou a limitação seja formalmente aceita.
 
 ## Next Phase
 
-Fase 2.6 — Render Specification, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.5.
+Fase 2.7 — Renderer Integration, somente após resolver ou aceitar formalmente os bloqueios das Fases 2.1 a 2.6.
 
 ## Git Commit
 
-`f6f74c0` — `AI Digital Art Director — Phase 2.5 Layout Plan`
+`7a13c96` — `AI Digital Art Director — Phase 2.6 Render Specification`
 
 ## Timestamp
 
-2026-09-17T22:22:00-03:00
+2026-09-17T22:25:00-03:00
