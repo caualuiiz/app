@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends
 from auth import require_roles
 from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, GenerateArtDirectionRequest
 from ai.art_direction_service import generate_art_direction, list_directions
+from ai.design_system import DesignSystemListResponse, DesignSystemResponse, GenerateDesignSystemRequest
+from ai.design_system_service import generate_design_system, list_design_systems
 from ai.reference import AnalyzeReferencesRequest, ReferenceProfileListResponse, ReferenceProfileResponse
 from ai.reference_intelligence import analyze_references, list_profiles as list_reference_profiles
 from ai.visual import AnalyzeImagesRequest, VisualProfileListResponse, VisualProfileResponse
@@ -42,3 +44,13 @@ async def generate_design_art_direction(payload: GenerateArtDirectionRequest, m=
 @router.get("/art-direction", response_model=ArtDirectionListResponse)
 async def get_art_directions(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"directions": await list_directions(m["company_id"])}
+
+
+@router.post("/generate-design-system", response_model=DesignSystemResponse)
+async def generate_design_system_route(payload: GenerateDesignSystemRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await generate_design_system(m["company_id"], m["user_id"], payload)
+
+
+@router.get("/design-system", response_model=DesignSystemListResponse)
+async def get_design_systems(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return {"systems": await list_design_systems(m["company_id"])}

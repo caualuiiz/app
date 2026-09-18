@@ -39,6 +39,7 @@ async def create_indexes() -> None:
     await db.visual_profiles.create_index([("company_id", 1), ("created_at", -1)])
     await db.reference_profiles.create_index([("company_id", 1), ("created_at", -1)])
     await db.art_directions.create_index([("company_id", 1), ("created_at", -1)])
+    await db.design_systems.create_index([("company_id", 1), ("created_at", -1)])
 
 
 def close_db() -> None:
