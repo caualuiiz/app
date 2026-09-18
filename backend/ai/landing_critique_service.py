@@ -35,6 +35,7 @@ async def create_critique(company_id: str, user_id: str, preview_id: str) -> Lan
         "landing_state": landing.get("state") or {},
         "render_specification": render_spec.model_dump(by_alias=True),
     }
+    engine = LandingBrain()
     prompt = ("Avalie esta landing como um diretor de arte e especialista em conversão com mais de 20 anos. "
               "Não invente fatos. Verifique hierarquia, coerência visual, mídia, conversão, mobile, acessibilidade "
               "e performance. Retorne somente JSON compatível com LandingCritique.\n\n" +
@@ -52,8 +53,6 @@ async def create_critique(company_id: str, user_id: str, preview_id: str) -> Lan
         raise HTTPException(503, "Landing Brain indisponível para a autocrítica") from exc
     except Exception as exc:
         raise HTTPException(502, "Autocrítica retornou formato inválido") from exc
-    except Exception as exc:
-        raise HTTPException(503, "Landing Brain indisponível para a autocrítica") from exc
 
     request_id = str(uuid.uuid4())
     created_at = _now()
