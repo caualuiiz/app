@@ -2,57 +2,52 @@
 
 ## Current Phase
 
-Fase 3.1 — Quality Assurance e Testes de Integração End-to-End
+Fase 3.2 — Claude Provider + AI Provider Factory + Orchestrator
 
 ## Status
 
-PASSOU EM AMBIENTE LOCAL COM LIMITAÇÕES DE AMBIENTE
+IMPLEMENTADA NO BRANCH `feature/ai-phase-3.2`
 
-As Fases 2.1 a 2.9 possuem contratos, backend, frontend e testes locais. A Fase 3.1 verificou a compatibilidade do ciclo Render Specification → Preview → Apply com isolamento de tenant, expiração, idempotência, versionamento e separação entre Draft e Published.
+A arquitetura de provider de IA foi adicionada sobre o pipeline das Fases 2.1–2.9 e o QA da Fase 3.1, sem alterar o isolamento multi-tenant existente.
 
-## QA Executado
+## Implementado
 
-Foi criado `tests/test_phase31_integration.py`, com bancos company-scoped em memória e execução do fluxo completo de criação de Preview e aplicação ao Draft.
+- Interface abstrata `AIProvider`.
+- `ClaudeProvider` com integração assíncrona ao SDK Anthropic.
+- `ProviderFactory` com seleção por `AI_PROVIDER`.
+- `AIOrchestrator` com contexto seguro e sanitização de identificadores/segredos.
+- Contrato Pydantic `StructuredDecision`.
+- Validador de decisão com bloqueio de campos sensíveis.
+- Serviço `create_ai_decision` com leitura tenant-scoped dos artefatos de IA existentes.
+- Endpoint autenticado `POST /api/design/ai-decision` para OWNER/MANAGER.
+- Persistência em `landing_decisions`.
+- Dependência `anthropic` adicionada ao backend.
+- Testes unitários para sanitização, validação e configuração do Claude.
 
-O teste integrado confirma incremento de `draft_version`, snapshot em `draft_versions`, decisão em `landing_decisions`, Preview `APPLIED`, `state.is_published` preservado como `false`, isolamento entre tenants, idempotência do mesmo request, rejeição de versão obsoleta e rejeição de Preview expirado.
+## Segurança
 
-O harness assíncrono usa `asyncio.run` da biblioteca padrão. Não foi adicionada dependência de pytest.
+- `company_id` e `user_id` continuam vindo exclusivamente da associação autenticada.
+- O contexto enviado ao provider remove identificadores de tenant e campos sensíveis.
+- A decisão retornada pelo provider passa por validação Pydantic antes de ser persistida.
+- Nenhuma chave Anthropic foi adicionada ao repositório.
+- O endpoint não expõe `company_id` ou `user_id` na resposta.
 
-## Resultados
+## Limitações
 
-- `python3 -m pytest -q`: 40 passed, 1 warning.
-- `python3 -m compileall -q backend tests`: PASS.
-- `git diff --check`: PASS.
-- `CI=true npm test -- --watchAll=false --runInBand`: 3 passed.
-- `npm run build`: PASS.
-
-O build mantém dois warnings preexistentes de dependências de `useEffect` em `frontend/src/pages/Agenda.jsx` e `frontend/src/pages/Clients.jsx`.
-
-## QA Coverage
-
-As Fases 2.1–2.9 foram inventariadas no relatório `RELATORIO_QA_FASE_3_1.md`. A cobertura inclui contratos estruturados, whitelist, tenant, Draft, Preview, Apply, expiração, idempotência e concorrência otimista.
-
-## Security Verification
-
-Os testes não apagam dados, não executam comandos e não usam banco real. Consultas de Preview e Apply mantêm `company_id` autenticado. O Apply não altera `is_published` e não publica automaticamente.
-
-## Limitations
-
-Não foi executado E2E em navegador real, MongoDB Atlas, provider de IA ou dois processos concorrentes reais. A atomicidade multi-documento entre Draft, snapshot, decisão e Preview ainda requer transação MongoDB em replica set.
-
-## Artifacts
-
-- `tests/test_phase31_integration.py`
-- `RELATORIO_QA_FASE_3_1.md`
+- A chamada real à Anthropic ainda depende de `ANTHROPIC_API_KEY` e `ANTHROPIC_MODEL` configurados no ambiente de execução.
+- O modelo default legado do adapter é provisório; a Fase 3.3 deve exigir e validar a configuração real do modelo.
+- Não foi executado aqui um E2E real contra Anthropic/MongoDB de produção.
+- A execução de testes no ambiente remoto do GitHub ainda precisa ser confirmada por CI ou ambiente local configurado.
 
 ## Current Pause Point
 
-A Fase 3.1 está pronta para checkpoint. O próximo passo recomendado é validação integrada em ambiente configurado, seguida de E2E visual real, teste multi-tenant distribuído, transação MongoDB e rollback.
+A implementação de código da Fase 3.2 está no branch `feature/ai-phase-3.2`. O próximo passo é a Fase 3.3: configuração segura das variáveis Anthropic/MongoDB, primeiro teste real do provider e validação do fluxo completo com persistência.
 
-## Git Commit
+## Commits
 
-`6fd8f2e` — `QA — Phase 3.1 End-to-End Integration Tests`
+- `3275de9` — criação da interface `AIProvider`.
+- Commits subsequentes no branch adicionam contrato, validator, factory, ClaudeProvider, orchestrator, service, endpoint, dependência e testes.
 
 ## Timestamp
 
-2026-09-17T22:46:00-03:00
+2026-09-18
