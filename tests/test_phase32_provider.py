@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from backend.ai.claude_provider import ClaudeProvider
@@ -20,11 +22,10 @@ class FakeProvider:
         }
 
 
-@pytest.mark.asyncio
-async def test_orchestrator_sanitizes_tenant_identifiers_and_validates_decision():
-    decision = await AIOrchestrator(FakeProvider()).decide(
+def test_orchestrator_sanitizes_tenant_identifiers_and_validates_decision():
+    decision = asyncio.run(AIOrchestrator(FakeProvider()).decide(
         context={"company": {"name": "Teste", "company_id": "must-not-leak"}, "landing": {"hero": "Teste"}},
-    )
+    ))
     assert decision.confidence == 0.91
     assert decision.actions[0].type == "SET_THEME"
 
