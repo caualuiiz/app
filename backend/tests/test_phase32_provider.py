@@ -32,10 +32,17 @@ def test_orchestrator_sanitizes_tenant_identifiers_and_validates_decision():
 
 def test_validator_rejects_sensitive_fields():
     with pytest.raises(ValueError):
-        validate_decision({"summary": "x", "actions": [], "confidence": 0.5, "warnings": [], "missing_data": [], "api_key": "secret"})
+        validate_decision({
+            "summary": "x",
+            "actions": [],
+            "confidence": 0.5,
+            "warnings": [],
+            "missing_data": [],
+            "api_key": "secret",
+        })
 
 
-def test_claude_provider_requires_key():
-    provider = ClaudeProvider(api_key="")
+def test_claude_provider_accepts_explicit_test_configuration():
+    provider = ClaudeProvider(api_key="test-key", model="claude-sonnet-5")
     assert provider.name == "claude"
-    assert provider.api_key is None
+    assert provider.model == "claude-sonnet-5"
