@@ -45,6 +45,8 @@ async def create_indexes() -> None:
     await db.preview_sessions.create_index("preview_id", unique=True)
     await db.preview_sessions.create_index([("company_id", 1), ("created_at", -1)])
     await db.preview_sessions.create_index("expires_at")
+    await db.landing_decisions.create_index([("company_id", 1), ("request_id", 1)], unique=True)
+    await db.draft_versions.create_index([("company_id", 1), ("version", 1)], unique=True)
 
 
 def close_db() -> None:

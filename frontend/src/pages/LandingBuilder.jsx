@@ -26,6 +26,7 @@ export default function LandingBuilderPage() {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [creatingPreview, setCreatingPreview] = useState(false);
+  const [applyingPreview, setApplyingPreview] = useState(false);
   const [tab, setTab] = useState("chat");
   const fileRef = useRef(null);
   const scrollRef = useRef(null);
@@ -102,6 +103,21 @@ export default function LandingBuilderPage() {
     finally { setCreatingPreview(false); }
   };
 
+  const applyPreview = async () => {
+    if (!data?.previewId) return;
+    setApplyingPreview(true);
+    try {
+      const { data: applied } = await api.post("/design/apply-preview", {
+        preview_id: data.previewId,
+        request_id: (globalThis.crypto?.randomUUID && globalThis.crypto.randomUUID()) || `apply-${Date.now()}`,
+        expected_draft_version: data.draft_version ?? 0,
+      });
+      setData(d => ({ ...d, draft_version: applied.new_version, renderSpecification: applied.render_spec }));
+      toast.success("Preview aplicado ao Draft sem publicar");
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setApplyingPreview(false); }
+  };
+
   const messages = data?.messages || [];
   const emptyChat = messages.length === 0;
   const publicUrl = `/${company?.slug}`;
@@ -116,6 +132,7 @@ export default function LandingBuilderPage() {
           <div className="flex gap-2">
             <Button variant="outline" asChild data-testid="view-public-btn"><a href={publicUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2"/>Visualizar</a></Button>
             <Button variant="outline" onClick={createPreview} disabled={creatingPreview} data-testid="create-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{creatingPreview ? "Gerando..." : "Gerar Preview"}</Button>
+            <Button variant="outline" onClick={applyPreview} disabled={!data?.previewId || applyingPreview} data-testid="apply-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{applyingPreview ? "Aplicando..." : "Aplicar ao Draft"}</Button>
             <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
           </div>
         </div>

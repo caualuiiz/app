@@ -8,6 +8,8 @@ from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, Gen
 from ai.art_direction_service import generate_art_direction, list_directions
 from ai.design_system import DesignSystemListResponse, DesignSystemResponse, GenerateDesignSystemRequest
 from ai.design_system_service import generate_design_system, list_design_systems
+from ai.design_application import ApplyDesignRequest, ApplyDesignResponse
+from ai.design_application_service import apply_design
 from ai.layout_plan import GenerateLayoutPlanRequest, LayoutPlanListResponse, LayoutPlanResponse
 from ai.layout_plan_service import generate_layout_plan, list_layout_plans
 from ai.preview_application import CreatePreviewRequest, PreviewListResponse, PreviewResponse
@@ -95,3 +97,8 @@ async def get_design_preview(preview_id: str, m=Depends(require_roles("OWNER", "
 @router.get("/previews", response_model=PreviewListResponse)
 async def get_design_previews(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"previews": await list_previews(m["company_id"])}
+
+
+@router.post("/apply-preview", response_model=ApplyDesignResponse)
+async def apply_design_preview(payload: ApplyDesignRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await apply_design(m["company_id"], m["user_id"], payload)
