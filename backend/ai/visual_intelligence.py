@@ -87,6 +87,7 @@ async def _call_existing_provider(images: list[dict[str, str]], company_context:
     except ImportError as exc:
         raise VisualProviderUnavailable("provider existente indisponível") from exc
 
+    manifest = json.dumps([{"index": index + 1, "image_path": image["path"]} for index, image in enumerate(images)], ensure_ascii=False)
     prompt = (
         "Analise somente as imagens fornecidas. Não invente fatos. "
         "Retorne JSON válido com exatamente estes campos: "
