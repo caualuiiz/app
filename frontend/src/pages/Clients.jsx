@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Search, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -28,17 +28,17 @@ export default function ClientsPage() {
   const [error, setError] = useState("");
   const [history, setHistory] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get("/clients", { params: { search } });
       setItems(data);
     } catch (e) { toast.error(formatApiError(e)); }
     finally { setLoading(false); }
-  };
+  }, [search]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); /* eslint-disable-next-line */ }, [search]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
 
   const openNew = () => { setEditing(null); setForm({ name: "", phone: "", email: "", birth_date: "", notes: "" }); setError(""); setOpen(true); };
   const openEdit = (c) => { setEditing(c); setForm({ name: c.name, phone: c.phone || "", email: c.email || "", birth_date: c.birth_date || "", notes: c.notes || "" }); setError(""); setOpen(true); };
