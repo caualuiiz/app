@@ -13,6 +13,7 @@ from db import get_db
 from storage import build_upload_path, get_object, put_object
 from routes_domains import resolve_custom_domain
 from feature_limits import enforce_limit
+from whatsapp import send_new_booking, WhatsAppUnavailable
 
 router = APIRouter(prefix="/landing", tags=["landing"])
 public_router = APIRouter(prefix="/public", tags=["public"])
@@ -419,6 +420,13 @@ async def public_book(slug: str, payload: PublicBookIn):
         "created_at": n, "updated_at": n,
     }
     res = await db.appointments.insert_one(appt)
+    appt["_id"] = res.inserted_id
+    try:
+        await send_new_booking(comp, appt)
+    except WhatsAppUnavailable:
+        pass
+    except Exception:
+        pass
     return {"id": str(res.inserted_id), "date": payload.date, "start_time": payload.start_time,
             "end_time": end_time, "service_name": service["name"], "professional_name": pro_user["name"],
             "company_name": comp["name"], "status": "PENDING"}
