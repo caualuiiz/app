@@ -16,7 +16,7 @@ from storage import get_object
 from .visual import AnalyzeImagesRequest, VisualAnalysis, VisualProfileResponse
 
 MAX_IMAGES = 8
-MODEL_NAME = "gpt-4o-mini"
+MODEL_NAME = os.environ.get("LANDING_BRAIN_MODEL", "gpt-5.6-luna")
 
 
 class VisualProviderUnavailable(RuntimeError):
@@ -79,44 +79,26 @@ async def _load_image_inputs(paths: list[str]) -> list[dict[str, str]]:
 
 
 async def _call_existing_provider(images: list[dict[str, str]], company_context: str) -> VisualAnalysis:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise VisualProviderUnavailable("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage
-    except ImportError as exc:
-        raise VisualProviderUnavailable("provider existente indisponível") from exc
+    from .openai_runtime import OpenAIExecutionError, generate_json
 
-    manifest = json.dumps([{"index": index + 1, "image_path": image["path"]} for index, image in enumerate(images)], ensure_ascii=False)
+    manifest = [{"index": index + 1, "image_path": image["path"]} for index, image in enumerate(images)]
     prompt = (
-        "Analise somente as imagens fornecidas. Não invente fatos. "
-        "Retorne JSON válido com exatamente estes campos: "
-        "dominant_colors, secondary_colors, brightness, contrast, saturation, mood, style, image_insights, "
-        "environment, composition, subject, materials, lighting, luxury_level, minimalism_level, "
-        "visual_density, photographic_characteristics, confidence. image_insights deve ser uma lista de objetos, um por imagem, contendo image_path, likely_role, strengths, recommended_sections, treatment e confidence. "
-        "brightness, contrast, saturation, luxury_level, minimalism_level, visual_density e confidence "
-        "são números entre 0 e 1. Use null quando não for possível observar. "
-        f"Contexto não factual adicional do negócio: {company_context}. Manifesto das imagens: {manifest}. Use exatamente os image_path do manifesto."
+        "Analise somente as imagens fornecidas. Não invente fatos. Retorne JSON compatível com VisualAnalysis. "
+        "image_insights deve ter um objeto por imagem do manifesto, com image_path, likely_role, strengths, "
+        "recommended_sections, treatment e confidence. Use exatamente os image_path do manifesto. "
+        "Os valores numéricos devem ficar entre 0 e 1. Use null quando não for observável. "
+        f"Contexto do negócio: {company_context}. Manifesto: {json.dumps(manifest, ensure_ascii=False)}"
     )
-    contents = [ImageContent(image_base64=image["data"]) for image in images]
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"visual-{uuid.uuid4()}",
-            system_message="Você é um analista visual. Responda apenas JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        raw = await chat.send_message(UserMessage(text=prompt, file_contents=contents))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao analisar as imagens") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return VisualAnalysis.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato visual válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um analista visual profissional. Responda somente JSON válido.",
+            user_prompt=prompt,
+            images=images,
+            model=MODEL_NAME,
+        )
+        return VisualAnalysis.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise VisualProviderUnavailable(str(exc)) from exc
 
 async def analyze_images(company_id: str, user_id: str, request: AnalyzeImagesRequest) -> VisualProfileResponse:
     db = get_db()
