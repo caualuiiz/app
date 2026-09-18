@@ -18,6 +18,7 @@ import AvailabilityPage from "@/pages/Availability";
 import LandingBuilderPage from "@/pages/LandingBuilder";
 import PublicLandingPage from "@/pages/PublicLanding";
 import PublicBookingPage from "@/pages/PublicBooking";
+import RootEntry from "@/pages/RootEntry";
 
 function App() {
   return (
@@ -25,7 +26,7 @@ function App() {
       <AuthProvider>
         <Toaster richColors position="top-right"/>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RootEntry />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
