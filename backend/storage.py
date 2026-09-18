@@ -7,6 +7,7 @@ EMERGENT_LLM_KEY is present during migration.
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import os
 import uuid
@@ -40,7 +41,7 @@ def build_upload_path(company_id: str, filename: str) -> str:
 async def put_object(path: str, data: bytes, content_type: str) -> dict:
     gridfs_id = await _bucket().upload_from_stream(
         path,
-        data,
+        io.BytesIO(data),
         metadata={
             "contentType": content_type,
             "storagePath": path,
