@@ -2,78 +2,79 @@
 
 ## Current Phase
 
-Fase 3.2 — Landing Brain: agente profissional de criação de landing pages
+Fase 3.4 — Landing Blueprint profissional + compilação para Render Specification
 
 ## Status
 
-ARQUITETURA CORRIGIDA E IMPLEMENTADA NA BRANCH `feature/ai-phase-3.2`
+IMPLEMENTADA NA BRANCH `feature/ai-phase-3.2`; PENDENTE SOMENTE VALIDAÇÃO VISUAL E2E REAL
 
-A direção do projeto foi consolidada: o agente não é um provider externo e não está sendo treinado com dados dos clientes. Ele já possui uma experiência profissional fixa, modelada como um Diretor de Arte Digital e Especialista em Landing Pages com mais de 20 anos de atuação.
+O conceito do agente está consolidado: ele já possui experiência profissional fixa de 20+ anos. Os dados do cliente são matéria-prima de análise, não treinamento.
 
-## Princípio central
+## Implementado nesta etapa
 
-O cliente fornece matéria-prima para análise:
-- negócio e objetivo;
-- fotos;
-- referências;
-- serviços e informações fornecidas;
-- identidade e contexto do estabelecimento.
+- `LandingBlueprint`: contrato completo para identidade, Design System, Layout Plan, posicionamento de mídia, tom e conversão.
+- `MediaPlacement`: cada foto pode receber uma função profissional, seções-alvo, prioridade, tratamento, crop e ponto focal.
+- `VisualImageInsight`: a análise visual agora pode registrar o papel recomendado de cada imagem.
+- `MediaBinding`: Render Specification usa referências seguras como `media.image_01`, ligadas ao arquivo autorizado separadamente.
+- Validação de mídia: o Blueprint só aceita imagens presentes no perfil visual autorizado da empresa.
+- Validação de seções: referências de mídia só podem apontar para seções existentes no Blueprint.
+- `compile_render_spec()`: transforma o Blueprint profissional em uma Render Specification compatível com Preview/Apply.
+- Endpoint autenticado `POST /api/design/ai-blueprint`.
+- Índice MongoDB para `landing_blueprints`.
+- Testes de Blueprint e binding de mídia adicionados.
+- Isolamento multi-tenant mantido pela origem autenticada de `company_id`.
 
-O agente já possui o método profissional. Ele analisa esses dados e decide como cada elemento deve ser usado na landing page.
+## Fluxo atual
 
-## Implementado
+`Dados do cliente → Visual Intelligence → Landing Brain → Landing Blueprint → Render Specification → Preview → Apply`
 
-- `professional_brain.py`: identidade, experiência e regras profissionais fixas.
-- `reasoning_engine.py`: contrato interno para o motor de raciocínio.
-- `landing_brain.py`: executor do agente com persona profissional fixa.
-- `AIOrchestrator`: sanitização, preparação do contexto e validação da decisão.
-- `StructuredDecision`: contrato estruturado de decisões.
-- Validator de campos sensíveis.
-- Endpoint autenticado `POST /api/design/ai-decision`.
-- Persistência tenant-scoped em `landing_decisions`.
-- Configuração `LANDING_BRAIN_MODEL` documentada.
-- Removida a dependência Anthropic/Claude da arquitetura desta fase.
-- Removidos testes e arquivos específicos do provider Claude.
+O Landing Brain determina:
+- papel de cada foto;
+- seção de destino;
+- tratamento visual;
+- hierarquia;
+- identidade visual;
+- estrutura;
+- estratégia de conversão.
 
-## Como o agente pensa
+## Regra profissional
 
-1. Entende o negócio e o objetivo comercial.
-2. Analisa as evidências visuais.
-3. Determina a função de cada foto dentro da página.
-4. Define linguagem visual.
-5. Harmoniza paleta, tipografia, composição e mídia.
-6. Interpreta referências sem copiar.
-7. Constrói hierarquia e narrativa.
-8. Prioriza clareza, confiança, diferenciação e conversão.
-9. Identifica lacunas sem inventar fatos.
-10. Faz autocrítica antes de finalizar.
+O agente não aprende com o cliente. Ele já possui a experiência-base:
+**Diretor de Arte Digital + Especialista em Landing Pages, 20+ anos.**
 
-## Regra de experiência
+O modelo usado na execução é apenas um mecanismo de materialização do raciocínio; a metodologia e os critérios pertencem ao nosso Landing Brain.
 
-Os dados de cada cliente **não treinam** o agente. Eles são apenas analisados por um profissional que já possui a experiência-base.
+## Segurança
 
-## Execução
+- Contexto enviado ao motor é sanitizado pelo `AIOrchestrator`.
+- Identificadores internos, tokens, segredos e credenciais não são enviados.
+- Fotos precisam pertencer ao perfil visual da própria empresa.
+- Render Specification não expõe diretamente caminhos físicos de mídia nas seções; usa bindings seguros.
+- Nenhuma chave externa está versionada no GitHub.
 
-O modelo de execução é apenas o mecanismo usado para materializar o raciocínio do agente; a identidade, metodologia, critérios, regras e contrato pertencem ao nosso Landing Brain.
+## Testes
 
-## Validação
-
-- Contrato estruturado validado.
-- Sanitização de tenant e campos sensíveis validada.
-- Testes específicos do Landing Brain adicionados.
-- Nenhuma chave externa foi adicionada ao GitHub.
+- Teste do núcleo profissional do Landing Brain.
+- Teste de sanitização.
+- Teste do contrato Structured Decision.
+- Teste de Blueprint e rejeição de mídia não autorizada.
+- Validação estrutural local prevista antes do E2E visual.
 
 ## Próximo passo
 
-A próxima etapa deve transformar as decisões do Landing Brain em decisões visuais concretas dentro do pipeline já existente:
+Executar o primeiro E2E real com uma empresa de teste contendo fotos e referências reais:
+1. analisar imagens;
+2. gerar Blueprint;
+3. compilar Render Specification;
+4. criar Preview;
+5. verificar visualmente a distribuição das fotos e coerência da identidade;
+6. somente depois validar Apply.
 
-`Landing Brain → Design System → Layout Plan → Render Specification → Preview → Apply`
-
-Depois disso, adicionaremos o ciclo de crítica visual da própria landing antes da publicação.
+Após esse E2E, entraremos no ciclo de **autocrítica visual automática**, no qual o agente recebe o próprio Preview como evidência e propõe correções antes da publicação.
 
 ## Current Pause Point
 
-O conceito central do agente está agora corretamente representado no código: **ele já é experiente; ele não aprende; ele analisa e decide**.
+O agente já deixou de ser somente um gerador de decisões e passou a produzir um **Blueprint profissional executável** para a landing.
 
 ## Timestamp
 
