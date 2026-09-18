@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends
 
 from auth import require_roles
 from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, GenerateArtDirectionRequest
+from ai.decision import AIDecisionResponse
+from ai.landing_blueprint import LandingBlueprintResponse
+from ai.landing_critique import LandingCritiqueResponse
 from ai.art_direction_service import generate_art_direction, list_directions
+from ai.ai_decision_service import create_ai_decision
+from ai.landing_blueprint_service import create_landing_blueprint, refine_landing_blueprint
+from ai.landing_critique_service import create_critique
 from ai.design_system import DesignSystemListResponse, DesignSystemResponse, GenerateDesignSystemRequest
 from ai.design_system_service import generate_design_system, list_design_systems
 from ai.design_application import ApplyDesignRequest, ApplyDesignResponse
@@ -22,6 +28,35 @@ from ai.visual import AnalyzeImagesRequest, VisualProfileListResponse, VisualPro
 from ai.visual_intelligence import analyze_images, list_profiles
 
 router = APIRouter(prefix="/design", tags=["design"])
+
+
+@router.post("/ai-decision", response_model=AIDecisionResponse)
+async def generate_ai_decision(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await create_ai_decision(m["company_id"], m["user_id"])
+
+
+@router.post("/ai-blueprint", response_model=LandingBlueprintResponse)
+async def generate_ai_blueprint(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await create_landing_blueprint(m["company_id"], m["user_id"])
+
+
+@router.post("/critique-preview", response_model=LandingCritiqueResponse)
+async def critique_preview(preview_id: str, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await create_critique(m["company_id"], m["user_id"], preview_id)
+
+
+@router.post("/refine-blueprint", response_model=LandingBlueprintResponse)
+async def refine_blueprint(
+    blueprint_request_id: str,
+    critique_request_id: str,
+    m=Depends(require_roles("OWNER", "MANAGER")),
+):
+    return await refine_landing_blueprint(
+        m["company_id"],
+        m["user_id"],
+        blueprint_request_id,
+        critique_request_id,
+    )
 
 
 @router.post("/analyze-images", response_model=VisualProfileResponse)

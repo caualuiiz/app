@@ -18,6 +18,8 @@ import AvailabilityPage from "@/pages/Availability";
 import LandingBuilderPage from "@/pages/LandingBuilder";
 import PublicLandingPage from "@/pages/PublicLanding";
 import PublicBookingPage from "@/pages/PublicBooking";
+import RootEntry from "@/pages/RootEntry";
+import CommercialSettings from "@/pages/CommercialSettings";
 
 function App() {
   return (
@@ -25,7 +27,7 @@ function App() {
       <AuthProvider>
         <Toaster richColors position="top-right"/>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RootEntry />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -39,9 +41,11 @@ function App() {
             <Route path="/landing" element={<RequireRole roles={["OWNER","MANAGER"]}><LandingBuilderPage/></RequireRole>} />
             <Route path="/settings/company" element={<RequireRole roles={["OWNER","MANAGER"]}><CompanySettingsPage/></RequireRole>} />
             <Route path="/settings/users" element={<RequireRole roles={["OWNER","MANAGER"]}><UsersPage/></RequireRole>} />
+            <Route path="/settings/commercial" element={<RequireRole roles={["OWNER"]}><CommercialSettings/></RequireRole>} />
           </Route>
 
           <Route path="/:slug" element={<PublicLandingPage />} />
+          <Route path="/agendar" element={<PublicBookingPage />} />
           <Route path="/:slug/agendar" element={<PublicBookingPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

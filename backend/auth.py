@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 from typing import Iterable, Optional
 
 import bcrypt
@@ -19,7 +20,7 @@ from bson.errors import InvalidId
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 
 JWT_ALGORITHM = "HS256"
-ACCESS_TTL_MIN = 60 * 24  # 24h - keeps SPA session smooth
+ACCESS_TTL_MIN = 30
 REFRESH_TTL_DAYS = 7
 
 
@@ -51,6 +52,7 @@ def create_access_token(user_id: str, email: str) -> str:
 def create_refresh_token(user_id: str) -> str:
     payload = {
         "sub": user_id,
+        "jti": str(uuid4()),
         "type": "refresh",
         "exp": datetime.now(timezone.utc) + timedelta(days=REFRESH_TTL_DAYS),
     }
@@ -64,11 +66,11 @@ def decode_token(token: str) -> dict:
 def set_auth_cookies(response, access: str, refresh: str) -> None:
     response.set_cookie(
         key="access_token", value=access, httponly=True, secure=True,
-        samesite="none", max_age=ACCESS_TTL_MIN * 60, path="/",
+        samesite="lax", max_age=ACCESS_TTL_MIN * 60, path="/",
     )
     response.set_cookie(
         key="refresh_token", value=refresh, httponly=True, secure=True,
-        samesite="none", max_age=REFRESH_TTL_DAYS * 24 * 3600, path="/",
+        samesite="lax", max_age=REFRESH_TTL_DAYS * 24 * 3600, path="/",
     )
 
 

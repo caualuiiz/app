@@ -50,7 +50,7 @@ class ReferenceProfileResponse(BaseModel):
     image_count: int = Field(ge=0)
     image_paths: list[str] = Field(max_length=8)
     analysis: ReferenceAnalysis
-    provider: Literal["existing"]
+    provider: Literal["openai"]
     model: str
     created_at: str
 

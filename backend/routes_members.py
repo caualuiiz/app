@@ -15,6 +15,7 @@ from auth import (
 )
 from db import get_db
 from models import MembershipCreate, MembershipOut, MembershipUpdate
+from feature_limits import enforce_limit
 
 router = APIRouter(prefix="/memberships", tags=["memberships"])
 
@@ -60,6 +61,7 @@ async def create_membership(
     (with a random temporary password).
     """
     db = get_db()
+    await enforce_limit(db, membership["company_id"], "memberships", "profissionais/membros", "max_professionals")
     email = payload.email.lower().strip()
 
     user = await db.users.find_one({"email": email})
@@ -78,7 +80,6 @@ async def create_membership(
             "status": "ACTIVE",
             "created_at": now,
             "updated_at": now,
-            "temporary_password": tmp_password,  # visible to OWNER once
         })
         user = await db.users.find_one({"_id": result.inserted_id})
 

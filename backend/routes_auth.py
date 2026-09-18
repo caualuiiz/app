@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from auth import (
     clear_auth_cookies,
     create_access_token,
-    create_refresh_token,
     decode_token,
     get_current_user,
     hash_password,
@@ -20,6 +19,7 @@ from auth import (
     verify_password,
 )
 from db import get_db
+from refresh_sessions import issue_refresh_session, validate_refresh_session, revoke_refresh_session
 from models import (
     AuthResponse,
     ForgotPasswordIn,
@@ -109,7 +109,7 @@ async def register(payload: RegisterIn, response: Response):
     user_out = _serialize_user(doc)
 
     access = create_access_token(user_out["id"], user_out["email"])
-    refresh = create_refresh_token(user_out["id"])
+    refresh = await issue_refresh_session(user_out["id"])
     set_auth_cookies(response, access, refresh)
 
     return AuthResponse(user=UserOut(**user_out), needs_onboarding=True)
@@ -166,7 +166,10 @@ async def login(payload: LoginIn, request: Request, response: Response):
 
 
 @router.post("/logout")
-async def logout(response: Response, _user=Depends(get_current_user)):
+async def logout(request: Request, response: Response, _user=Depends(get_current_user)):
+    refresh = request.cookies.get("refresh_token")
+    if refresh:
+        await revoke_refresh_session(refresh)
     clear_auth_cookies(response)
     return {"success": True}
 
@@ -188,19 +191,23 @@ async def refresh_token(request: Request, response: Response):
     if not token:
         raise HTTPException(status_code=401, detail="Refresh token ausente")
     try:
-        payload = decode_token(token)
-    except Exception:  # noqa: BLE001
-        raise HTTPException(status_code=401, detail="Refresh token inválido")
-    if payload.get("type") != "refresh":
+        payload = await validate_refresh_session(token)
+    except Exception:
         raise HTTPException(status_code=401, detail="Refresh token inválido")
 
     db = get_db()
-    user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
+    try:
+        user_oid = ObjectId(payload["sub"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Refresh token inválido")
+    user = await db.users.find_one({"_id": user_oid})
     if not user or user.get("status") != "ACTIVE":
+        await revoke_refresh_session(token)
         raise HTTPException(status_code=401, detail="Usuário inválido")
 
+    await revoke_refresh_session(token)
     access = create_access_token(str(user["_id"]), user["email"])
-    new_refresh = create_refresh_token(str(user["_id"]))
+    new_refresh = await issue_refresh_session(str(user["_id"]))
     set_auth_cookies(response, access, new_refresh)
     return {"success": True}
 
@@ -222,10 +229,7 @@ async def forgot_password(payload: ForgotPasswordIn):
             "created_at": _now_iso(),
         })
         frontend = os.environ.get("FRONTEND_URL", "").rstrip("/")
-        logger.info(
-            "PASSWORD RESET LINK for %s -> %s/reset-password?token=%s",
-            email, frontend, token,
-        )
+        logger.info("Password reset token created for account recovery")
     return {"success": True}
 
 

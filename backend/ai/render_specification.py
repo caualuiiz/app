@@ -68,12 +68,20 @@ class RenderResponsive(BaseModel):
     desktop: str = Field(min_length=1, max_length=300)
 
 
+class MediaBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reference: str = Field(min_length=1, max_length=160)
+    source_path: str = Field(min_length=1, max_length=300)
+
+
 class RenderMedia(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     lazy_loading: bool
     allowed_types: list[Literal["image", "logo", "gallery"]] = Field(max_length=6)
     fallback: str = Field(min_length=1, max_length=240)
+    bindings: list[MediaBinding] = Field(default_factory=list, max_length=8)
 
 
 class RenderAccessibility(BaseModel):

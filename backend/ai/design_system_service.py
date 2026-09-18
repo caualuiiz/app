@@ -47,41 +47,22 @@ def build_design_system_context(company: dict[str, Any], direction: ArtDirection
 
 
 async def _call_provider(context: dict[str, Any]) -> DesignSystem:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise RuntimeError("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-    except ImportError as exc:
-        raise RuntimeError("provider existente indisponível") from exc
-
+    from .openai_runtime import OpenAIExecutionError, generate_json
     prompt = (
         "Gere um Design System estruturado e validável derivado da Art Direction fornecida. "
-        "Não invente dados da empresa. Retorne JSON válido com exatamente colors, typography, spacing, "
-        "radius, grid, motion, visual, responsive, accessibility_notes, confidence e warnings. "
-        "Todas as cores devem ser hexadecimais de seis dígitos. motion.intensity deve ser LOW, MEDIUM ou HIGH. "
-        "Use CSS/design tokens, não código executável. Priorize clareza, identidade, responsividade, acessibilidade "
-        "e performance; respeite prefers-reduced-motion nas notas ou motion.\n\n"
+        "Não invente dados da empresa. Retorne JSON compatível com DesignSystem. "
+        "Todas as cores devem ser hexadecimais. Use tokens de design, não código.\n\n"
         + json.dumps(context, ensure_ascii=False)
     )
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"design-system-{uuid.uuid4()}",
-            system_message="Você é um designer de sistemas visuais. Responda somente JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        raw = await chat.send_message(UserMessage(text=prompt))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao gerar o Design System") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return DesignSystem.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato de Design System válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um designer de sistemas visuais sênior. Responda somente JSON válido.",
+            user_prompt=prompt,
+            model=MODEL_NAME,
+        )
+        return DesignSystem.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 async def generate_design_system(
     company_id: str,
@@ -107,7 +88,7 @@ async def generate_design_system(
         "user_id": user_id,
         "art_direction_request_id": direction_doc.get("request_id"),
         "design_system": design_system.model_dump(by_alias=True),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }

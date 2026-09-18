@@ -16,11 +16,7 @@ from .reference import (
     ReferenceAnalysis,
     ReferenceProfileResponse,
 )
-from .visual_intelligence import (
-    MODEL_NAME,
-    _call_existing_provider,
-    _load_image_inputs,
-)
+from .visual_intelligence import MODEL_NAME, _load_image_inputs
 
 MAX_IMAGES = 8
 
@@ -59,48 +55,23 @@ async def _call_reference_provider(
     source_description: str | None,
     company_context: str,
 ) -> ReferenceAnalysis:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise RuntimeError("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage
-    except ImportError as exc:
-        raise RuntimeError("provider existente indisponível") from exc
-
-    source_text = json.dumps(
-        {"url": source_url, "description": source_description, "company_context": company_context},
-        ensure_ascii=False,
-    )
+    from .openai_runtime import OpenAIExecutionError, generate_json
+    source_text = json.dumps({"url": source_url, "description": source_description, "company_context": company_context}, ensure_ascii=False)
     prompt = (
-        "Analise a referência visual somente para extrair PRINCÍPIOS DE DESIGN. "
-        "Não copie textos, logos, identidade, imagens, código ou layout proprietário. "
-        "Não diga para copiar o site. Retorne JSON válido com exatamente estes campos: "
-        "typography, spacing, composition, color_strategy, imagery, motion, interaction, "
-        "layout_philosophy, visual_density, editorial_characteristics, premium_characteristics, "
-        "design_principles, prohibited_copy, confidence. Todos os campos de lista devem conter "
-        "princípios curtos; confidence deve estar entre 0 e 1; use listas vazias quando não houver evidência. "
+        "Analise a referência visual somente para extrair PRINCÍPIOS DE DESIGN. Não copie textos, logos, identidade, "
+        "imagens, código ou layout proprietário. Retorne JSON compatível com ReferenceAnalysis. "
         f"Fonte da referência: {source_text}"
     )
-    contents = [ImageContent(image_base64=image["data"]) for image in images]
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"reference-{uuid.uuid4()}",
-            system_message="Você é um analista de princípios de design. Responda somente JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        message = UserMessage(text=prompt, file_contents=contents) if contents else UserMessage(text=prompt)
-        raw = await chat.send_message(message)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao analisar a referência") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return ReferenceAnalysis.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato de referência válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um analista de princípios de design. Responda somente JSON válido.",
+            user_prompt=prompt,
+            images=images,
+            model=MODEL_NAME,
+        )
+        return ReferenceAnalysis.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 async def analyze_references(company_id: str, user_id: str, request: AnalyzeReferencesRequest) -> ReferenceProfileResponse:
     db = get_db()
@@ -140,7 +111,7 @@ async def analyze_references(company_id: str, user_id: str, request: AnalyzeRefe
         "image_count": len(paths),
         "image_paths": paths,
         "analysis": analysis.model_dump(),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }

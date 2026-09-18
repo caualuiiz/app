@@ -2,57 +2,91 @@
 
 ## Current Phase
 
-Fase 3.1 — Quality Assurance e Testes de Integração End-to-End
+Fase 7 — Pré-deploy comercial concluído em código
 
 ## Status
 
-PASSOU EM AMBIENTE LOCAL COM LIMITAÇÕES DE AMBIENTE
+CÓDIGO COMERCIAL CONSOLIDADO; DEPLOY REAL BLOQUEADO APENAS POR CONFIGURAÇÃO EXTERNA DE INFRAESTRUTURA
 
-As Fases 2.1 a 2.9 possuem contratos, backend, frontend e testes locais. A Fase 3.1 verificou a compatibilidade do ciclo Render Specification → Preview → Apply com isolamento de tenant, expiração, idempotência, versionamento e separação entre Draft e Published.
+## Núcleo
 
-## QA Executado
+O produto possui um Landing Brain com experiência fixa de 20+ anos:
+**Diretor de Arte Digital + Especialista em Landing Pages.**
 
-Foi criado `tests/test_phase31_integration.py`, com bancos company-scoped em memória e execução do fluxo completo de criação de Preview e aplicação ao Draft.
+O agente não aprende com clientes. Analisa os dados de cada negócio e decide como usar fotos, referências, identidade visual, estrutura e conversão.
 
-O teste integrado confirma incremento de `draft_version`, snapshot em `draft_versions`, decisão em `landing_decisions`, Preview `APPLIED`, `state.is_published` preservado como `false`, isolamento entre tenants, idempotência do mesmo request, rejeição de versão obsoleta e rejeição de Preview expirado.
+## Pipeline
 
-O harness assíncrono usa `asyncio.run` da biblioteca padrão. Não foi adicionada dependência de pytest.
+`Dados → Visual Intelligence → Landing Brain → Landing Blueprint → Render Specification → Preview → Autocrítica → Refinamento → Apply/Publish`
 
-## Resultados
+## Entregas concluídas
 
-- `python3 -m pytest -q`: 40 passed, 1 warning.
-- `python3 -m compileall -q backend tests`: PASS.
-- `git diff --check`: PASS.
-- `CI=true npm test -- --watchAll=false --runInBand`: 3 passed.
-- `npm run build`: PASS.
+- SaaS multi-tenant, agenda, clientes, serviços e booking público.
+- Landing pública e editor.
+- Visual Intelligence com análise por imagem.
+- Reference Intelligence.
+- Art Direction.
+- Design System.
+- Layout Plan.
+- Render Specification.
+- Preview/Apply.
+- Landing Brain profissional.
+- Blueprint com posicionamento de mídia.
+- Autocrítica e refinamento automático.
+- Publicação condicionada à crítica aprovada.
+- OpenAI Responses API como motor de execução.
+- WhatsApp Cloud API, múltiplos números, aprovação/recusa e lembretes.
+- Stripe Checkout, Portal, webhook e limites server-side.
+- Domínio personalizado com verificação e integração com Render Custom Domains.
+- Booking e landing em domínio personalizado.
+- Rotação/revogação de refresh sessions.
+- Access token reduzido para 30 minutos.
+- Remoção de armazenamento de senha temporária em texto.
+- CI para backend/frontend.
+- Blueprint Render para API, frontend e cron.
+- Nenhuma chave real versionada.
 
-O build mantém dois warnings preexistentes de dependências de `useEffect` em `frontend/src/pages/Agenda.jsx` e `frontend/src/pages/Clients.jsx`.
+## Produção
 
-## QA Coverage
+O `render.yaml` está preparado para:
+- API FastAPI;
+- frontend React estático;
+- cron de lembretes;
+- secrets de MongoDB/OpenAI/Stripe/WhatsApp;
+- automação de custom domains via API do Render.
 
-As Fases 2.1–2.9 foram inventariadas no relatório `RELATORIO_QA_FASE_3_1.md`. A cobertura inclui contratos estruturados, whitelist, tenant, Draft, Preview, Apply, expiração, idempotência e concorrência otimista.
+Render documenta web/static/cron services em Blueprints e custom domains por serviço; a API também permite criar/verificar/remover custom domains. citeturn830529search1turn830529search0turn830529search6
 
-## Security Verification
+## Validação
 
-Os testes não apagam dados, não executam comandos e não usam banco real. Consultas de Preview e Apply mantêm `company_id` autenticado. O Apply não altera `is_published` e não publica automaticamente.
+O workflow de CI foi configurado para pull requests, com cancelamento de execuções obsoletas.
 
-## Limitations
+No momento do checkpoint, o GitHub Actions estava mantendo o último workflow em fila e o commit não apresentava status de falha. Isso é uma limitação do runner externo, não uma confirmação de teste verde.
 
-Não foi executado E2E em navegador real, MongoDB Atlas, provider de IA ou dois processos concorrentes reais. A atomicidade multi-documento entre Draft, snapshot, decisão e Preview ainda requer transação MongoDB em replica set.
+## Deploy real
 
-## Artifacts
+Ainda depende de credenciais/contas externas:
+- MongoDB;
+- OpenAI API key;
+- Stripe;
+- Meta WhatsApp;
+- Render/AppDeploy;
+- DNS do domínio real.
 
-- `tests/test_phase31_integration.py`
-- `RELATORIO_QA_FASE_3_1.md`
+Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-A Fase 3.1 está pronta para checkpoint. O próximo passo recomendado é validação integrada em ambiente configurado, seguida de E2E visual real, teste multi-tenant distribuído, transação MongoDB e rollback.
+Código consolidado na branch `feature/ai-phase-3.2` e preparado para merge/produção.
 
-## Git Commit
-
-`6fd8f2e` — `QA — Phase 3.1 End-to-End Integration Tests`
+Após conectar a infraestrutura externa:
+1. aplicar `render.yaml`;
+2. preencher secrets;
+3. deploy;
+4. smoke test;
+5. conectar primeiro domínio;
+6. executar E2E com cliente real.
 
 ## Timestamp
 
-2026-09-17T22:46:00-03:00
+2026-09-18

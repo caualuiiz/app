@@ -1,0 +1,95 @@
+services:
+  - type: web
+    name: saas-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LANDING_BRAIN_MODEL
+        value: gpt-5.6-luna
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
+      - key: WHATSAPP_API_VERSION
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_TEMPLATE_NEW_BOOKING
+        sync: false
+      - key: WHATSAPP_TEMPLATE_BOOKING_CONFIRMED
+        sync: false
+      - key: WHATSAPP_TEMPLATE_BOOKING_REJECTED
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: pt_BR
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_FRONTEND_SERVICE_ID
+        sync: false
+
+  - type: web
+    name: saas-frontend
+    runtime: static
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: frontend/build
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        sync: false
+      - key: REACT_APP_APP_HOST
+        sync: false
+
+  - type: cron
+    name: saas-whatsapp-reminders
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_reminders.py
+    schedule: "*/10 * * * *"
+    plan: starter
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LANDING_BRAIN_MODEL
+        value: gpt-5.6-luna
+      - key: FIELD_ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: saas-api
+          envVarKey: FIELD_ENCRYPTION_KEY
+      - key: WHATSAPP_API_VERSION
+        sync: false
+      - key: WHATSAPP_TEMPLATE_REMINDER_24H
+        sync: false
+      - key: WHATSAPP_TEMPLATE_REMINDER_2H
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: pt_BR

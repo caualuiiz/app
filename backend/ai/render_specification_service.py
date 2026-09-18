@@ -47,42 +47,22 @@ def build_render_context(company: dict[str, Any], plan: LayoutPlan) -> dict[str,
 
 
 async def _call_provider(context: dict[str, Any]) -> RenderSpecification:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise RuntimeError("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-    except ImportError as exc:
-        raise RuntimeError("provider existente indisponível") from exc
-
+    from .openai_runtime import OpenAIExecutionError, generate_json
     prompt = (
         "Converta o Layout Plan em uma Render Specification declarativa e segura. "
-        "Retorne JSON válido com exatamente version, theme, typography, spacing, sections, motion, "
-        "interactions, responsive, media e accessibility. version deve ser 1.0. Não retorne HTML, CSS, "
-        "JavaScript, React, Python, SQL, shell, comandos ou código arbitrário. Cada referência deve ser um "
-        "caminho estruturado nos namespaces landing, company, media ou profile. Use somente os section_type e "
-        "layout_mode permitidos pelo contrato. O renderer deverá apenas interpretar este objeto. Inclua fallback "
-        "seguro para qualquer mídia, interação ou motion não disponível.\n\n"
+        "Retorne JSON compatível com RenderSpecification. Não retorne HTML, CSS, JavaScript, React, Python, SQL "
+        "ou comandos. Use somente referências estruturadas e inclua fallback seguro.\n\n"
         + json.dumps(context, ensure_ascii=False)
     )
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"render-spec-{uuid.uuid4()}",
-            system_message="Você é um arquiteto de especificações declarativas. Responda somente JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        raw = await chat.send_message(UserMessage(text=prompt))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao gerar a Render Specification") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return RenderSpecification.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato de Render Specification válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um arquiteto de especificações declarativas. Responda somente JSON válido.",
+            user_prompt=prompt,
+            model=MODEL_NAME,
+        )
+        return RenderSpecification.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 async def generate_render_spec(
     company_id: str,
@@ -108,7 +88,7 @@ async def generate_render_spec(
         "user_id": user_id,
         "layout_plan_request_id": plan_doc["request_id"],
         "render_specification": specification.model_dump(by_alias=True),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }

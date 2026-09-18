@@ -46,6 +46,15 @@ async def create_indexes() -> None:
     await db.preview_sessions.create_index([("company_id", 1), ("created_at", -1)])
     await db.preview_sessions.create_index("expires_at")
     await db.landing_decisions.create_index([("company_id", 1), ("request_id", 1)], unique=True)
+    await db.landing_blueprints.create_index([("company_id", 1), ("created_at", -1)])
+    await db.landing_critiques.create_index([("company_id", 1), ("created_at", -1)])
+    await db.custom_domains.create_index("domain", unique=True)
+    await db.custom_domains.create_index([("company_id", 1), ("status", 1)])
+    await db.subscriptions.create_index([("company_id", 1), ("updated_at", -1)])
+    await db.billing_events.create_index("event_id", unique=True)
+    await db.refresh_sessions.create_index("jti", unique=True)
+    await db.refresh_sessions.create_index("expires_at", expireAfterSeconds=0)
+    await db.refresh_sessions.create_index([("user_id", 1), ("revoked_at", 1)])
     await db.draft_versions.create_index([("company_id", 1), ("version", 1)], unique=True)
 
 

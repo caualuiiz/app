@@ -15,6 +15,7 @@ const BIZ_LABELS = { BARBERSHOP: "Barbearia", BEAUTY_SALON: "Salão de Beleza", 
 
 export default function PublicBookingPage() {
   const { slug } = useParams();
+  const isCustomDomain = !slug;
   const [ctx, setCtx] = useState(null);
   const [err, setErr] = useState("");
   const [step, setStep] = useState(1);
@@ -31,7 +32,8 @@ export default function PublicBookingPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${slug}/booking-context`);
+        const basePath = isCustomDomain ? "domain/booking-context" : `${slug}/booking-context`;
+        const { data } = await axios.get(`${BACKEND}/api/public/${basePath}`, isCustomDomain ? { params: { domain: window.location.hostname } } : undefined);
         setCtx(data); document.title = `Agendar - ${data.company.name}`;
       } catch (e) { setErr(e?.response?.data?.detail || "Página não disponível"); }
     })();
@@ -48,9 +50,10 @@ export default function PublicBookingPage() {
     (async () => {
       setSlotsLoading(true);
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${slug}/slots`, {
-          params: { service_id: service.id, professional_id: professional.id, date },
-        });
+        const basePath = isCustomDomain ? "domain/slots" : `${slug}/slots`;
+        const params = { service_id: service.id, professional_id: professional.id, date };
+        if (isCustomDomain) params.domain = window.location.hostname;
+        const { data } = await axios.get(`${BACKEND}/api/public/${basePath}`, { params });
         setSlots(data.slots);
       } catch (e) { toast.error(e?.response?.data?.detail || "Erro ao buscar horários"); }
       finally { setSlotsLoading(false); }
@@ -60,11 +63,13 @@ export default function PublicBookingPage() {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const { data } = await axios.post(`${BACKEND}/api/public/${slug}/book`, {
+      const basePath = isCustomDomain ? "domain/book" : `${slug}/book`;
+      const requestParams = isCustomDomain ? { params: { domain: window.location.hostname } } : undefined;
+      const { data } = await axios.post(`${BACKEND}/api/public/${basePath}`, {
         service_id: service.id, professional_id: professional.id, date, start_time: chosenTime,
         client_name: client.name, client_phone: client.phone,
         client_email: client.email || null, notes: client.notes || null,
-      });
+      }, requestParams);
       setConfirmed(data);
     } catch (e) { toast.error(e?.response?.data?.detail || "Erro ao agendar"); }
     finally { setSubmitting(false); }
@@ -87,7 +92,7 @@ export default function PublicBookingPage() {
           <p><strong>Horário:</strong> {confirmed.start_time} → {confirmed.end_time}</p>
           <p><Badge className="bg-amber-100 text-amber-800">Pendente de confirmação</Badge></p>
         </div>
-        <Link to={`/${slug}`} className="inline-block mt-6 text-indigo-600 hover:text-indigo-700 text-sm font-medium">Voltar à página</Link>
+        <Link to={isCustomDomain ? "/" : `/${slug}`} className="inline-block mt-6 text-indigo-600 hover:text-indigo-700 text-sm font-medium">Voltar à página</Link>
       </div>
     </div>
   );
@@ -95,7 +100,7 @@ export default function PublicBookingPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between">
-        <Link to={`/${slug}`} className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"><ArrowLeft className="h-4 w-4"/>Voltar</Link>
+        <Link to={isCustomDomain ? "/" : `/${slug}`} className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"><ArrowLeft className="h-4 w-4"/>Voltar</Link>
         <div className="text-right">
           <p className="text-xs uppercase tracking-widest text-slate-400">{BIZ_LABELS[ctx.company.business_type]}</p>
           <p className="font-bold" style={{ fontFamily: "'Plus Jakarta Sans'" }}>{ctx.company.name}</p>

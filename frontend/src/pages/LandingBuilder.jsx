@@ -27,6 +27,9 @@ export default function LandingBuilderPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [creatingPreview, setCreatingPreview] = useState(false);
   const [applyingPreview, setApplyingPreview] = useState(false);
+  const [critiquing, setCritiquing] = useState(false);
+  const [critique, setCritique] = useState(null);
+  const [blueprintRequestId, setBlueprintRequestId] = useState(null);
   const [tab, setTab] = useState("chat");
   const fileRef = useRef(null);
   const scrollRef = useRef(null);
@@ -93,12 +96,63 @@ export default function LandingBuilderPage() {
     catch (e) { toast.error(formatApiError(e)); }
   };
 
+  const runCritique = async () => {
+    if (!data?.previewId) return;
+    setCritiquing(true);
+    try {
+      const { data: result } = await api.post("/design/critique-preview", null, {
+        params: { preview_id: data.previewId },
+      });
+      setCritique(result);
+      if (result.critique?.ready_for_publish) {
+        toast.success("Autocrítica concluída: página pronta para publicação");
+      } else {
+        toast.warning("A IA encontrou pontos para corrigir antes da publicação");
+      }
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setCritiquing(false); }
+  };
+
   const createPreview = async () => {
     setCreatingPreview(true);
     try {
-      const { data: preview } = await api.post("/design/create-preview", {});
-      setData(d => ({ ...d, previewId: preview.preview_id, renderSpecification: preview.render_spec }));
-      toast.success("Preview criado sem publicar a página");
+      const { data: blueprint } = await api.post("/design/ai-blueprint");
+      const { data: preview } = await api.post("/design/create-preview", {
+        render_spec_request_id: blueprint.render_spec_request_id,
+      });
+      setBlueprintRequestId(blueprint.request_id);
+      setCritique(null);
+      setData(d => ({
+        ...d,
+        previewId: preview.preview_id,
+        renderSpecification: preview.render_spec,
+      }));
+      toast.success("Landing criada pelo Landing Brain e Preview gerado");
+    } catch (e) { toast.error(formatApiError(e)); }
+    finally { setCreatingPreview(false); }
+  };
+
+  const refineFromCritique = async () => {
+    if (!blueprintRequestId || !critique?.request_id) return;
+    setCreatingPreview(true);
+    try {
+      const { data: refined } = await api.post("/design/refine-blueprint", null, {
+        params: {
+          blueprint_request_id: blueprintRequestId,
+          critique_request_id: critique.request_id,
+        },
+      });
+      const { data: preview } = await api.post("/design/create-preview", {
+        render_spec_request_id: refined.render_spec_request_id,
+      });
+      setBlueprintRequestId(refined.request_id);
+      setCritique(null);
+      setData(d => ({
+        ...d,
+        previewId: preview.preview_id,
+        renderSpecification: preview.render_spec,
+      }));
+      toast.success("A IA refinou a landing e criou uma nova versão");
     } catch (e) { toast.error(formatApiError(e)); }
     finally { setCreatingPreview(false); }
   };
@@ -133,9 +187,28 @@ export default function LandingBuilderPage() {
             <Button variant="outline" asChild data-testid="view-public-btn"><a href={publicUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2"/>Visualizar</a></Button>
             <Button variant="outline" onClick={createPreview} disabled={creatingPreview} data-testid="create-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{creatingPreview ? "Gerando..." : "Gerar Preview"}</Button>
             <Button variant="outline" onClick={applyPreview} disabled={!data?.previewId || applyingPreview} data-testid="apply-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{applyingPreview ? "Aplicando..." : "Aplicar ao Draft"}</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
+            <Button variant="outline" onClick={runCritique} disabled={!data?.previewId || critiquing} data-testid="critique-preview-btn"><Sparkles className="h-4 w-4 mr-2"/>{critiquing ? "Analisando..." : "Criticar Preview"}</Button>
+            <Button variant="outline" onClick={refineFromCritique} disabled={!critique || critique.critique?.ready_for_publish || creatingPreview} data-testid="refine-preview-btn"><Wand2 className="h-4 w-4 mr-2"/>{creatingPreview ? "Refinando..." : "Corrigir com IA"}</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={publish} disabled={!critique?.critique?.ready_for_publish} data-testid="publish-btn"><Sparkles className="h-4 w-4 mr-2"/>{data?.state?.is_published ? "Republicar" : "Publicar"}</Button>
           </div>
         </div>
+
+        {critique?.critique && (
+          <div className="mb-3 rounded-xl border border-slate-200 bg-white p-4" data-testid="landing-critique">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="font-semibold text-sm">Revisão profissional da IA</div>
+              <Badge className={critique.critique.ready_for_publish ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                {critique.critique.ready_for_publish ? "Pronta para publicar" : "Precisa de ajustes"}
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">{critique.critique.overall_assessment}</p>
+            {critique.critique.priority_actions?.length > 0 && (
+              <div className="text-xs text-slate-600">
+                <strong>Prioridades:</strong> {critique.critique.priority_actions.slice(0, 3).join(" • ")}
+              </div>
+            )}
+          </div>
+        )}
 
         <Tabs value={tab} onValueChange={setTab} className="md:hidden mb-3">
           <TabsList className="w-full"><TabsTrigger value="chat" className="flex-1">Chat</TabsTrigger><TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger></TabsList>
