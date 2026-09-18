@@ -143,9 +143,19 @@
   "overrides": {
     "ajv": "8.17.1",
     "ajv-keywords": "5.1.0",
+    "babel-loader": {
+      "schema-utils": {
+        "ajv": "6.12.6",
+        "ajv-keywords": "3.5.2"
+      }
+    },
+    "file-loader": {
+      "schema-utils": {
+        "ajv": "6.12.6",
+        "ajv-keywords": "3.5.2"
+      }
+    },
     "fork-ts-checker-webpack-plugin": {
-      "ajv": "6.12.6",
-      "ajv-keywords": "3.5.2",
       "schema-utils": {
         "ajv": "6.12.6",
         "ajv-keywords": "3.5.2"
