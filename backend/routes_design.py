@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends
 from auth import require_roles
 from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, GenerateArtDirectionRequest
 from ai.decision import AIDecisionResponse
+from ai.landing_blueprint import LandingBlueprintResponse
 from ai.art_direction_service import generate_art_direction, list_directions
 from ai.ai_decision_service import create_ai_decision
+from ai.landing_blueprint_service import create_landing_blueprint
 from ai.design_system import DesignSystemListResponse, DesignSystemResponse, GenerateDesignSystemRequest
 from ai.design_system_service import generate_design_system, list_design_systems
 from ai.design_application import ApplyDesignRequest, ApplyDesignResponse
@@ -29,6 +31,11 @@ router = APIRouter(prefix="/design", tags=["design"])
 @router.post("/ai-decision", response_model=AIDecisionResponse)
 async def generate_ai_decision(m=Depends(require_roles("OWNER", "MANAGER"))):
     return await create_ai_decision(m["company_id"], m["user_id"])
+
+
+@router.post("/ai-blueprint", response_model=LandingBlueprintResponse)
+async def generate_ai_blueprint(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await create_landing_blueprint(m["company_id"], m["user_id"])
 
 
 @router.post("/analyze-images", response_model=VisualProfileResponse)
