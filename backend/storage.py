@@ -1,94 +1,33 @@
-"""Emergent-managed Object Storage client.
+"""Tenant file storage backed by MongoDB GridFS.
 
-Single storage_key per process. Files are stored under a per-app prefix and a
-per-company folder so tenants can't overwrite each other's files.
+New uploads no longer depend on the legacy Emergent object-storage service.
+A small compatibility fallback can still read legacy objects when the optional
+EMERGENT_LLM_KEY is present during migration.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
 
 import requests
+from motor.motor_asyncio import AsyncIOMotorGridFSBucket
+
+from db import get_db
 
 logger = logging.getLogger(__name__)
 
-_STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or (
-    "https://integrations.emergentagent.com"
-)
-STORAGE_URL = _STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+_BUCKET_NAME = os.environ.get("GRIDFS_BUCKET", "saas_files").strip() or "saas_files"
+_LEGACY_STORAGE_BASE = (
+    os.environ.get("INTEGRATION_PROXY_URL") or ""
+).strip() or "https://integrations.emergentagent.com"
+_LEGACY_STORAGE_URL = _LEGACY_STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
 _APP_NAME = os.environ.get("APP_NAME", "gestao-saas")
 
-_storage_key: str | None = None
 
-
-def init_storage(force: bool = False) -> str | None:
-    """Provision (or refresh) the session storage_key. Never raises."""
-    global _storage_key
-    if _storage_key and not force:
-        return _storage_key
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        logger.warning("EMERGENT_LLM_KEY missing – uploads will be disabled")
-        return None
-    try:
-        resp = requests.post(
-            f"{STORAGE_URL}/init", json={"emergent_key": key}, timeout=30
-        )
-        resp.raise_for_status()
-        _storage_key = resp.json()["storage_key"]
-        logger.info("Object storage initialized")
-        return _storage_key
-    except Exception as e:  # noqa: BLE001
-        logger.error("Object storage init failed: %s", e)
-        _storage_key = None
-        return None
-
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    if not key:
-        raise RuntimeError("Storage indisponível no momento")
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data,
-        timeout=120,
-    )
-    if resp.status_code == 404:
-        # key expired – refresh once
-        key = init_storage(force=True)
-        if not key:
-            raise RuntimeError("Storage indisponível no momento")
-        resp = requests.put(
-            f"{STORAGE_URL}/objects/{path}",
-            headers={"X-Storage-Key": key, "Content-Type": content_type},
-            data=data,
-            timeout=120,
-        )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def get_object(path: str) -> tuple[bytes, str]:
-    key = init_storage()
-    if not key:
-        raise RuntimeError("Storage indisponível no momento")
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key},
-        timeout=60,
-    )
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        if key:
-            resp = requests.get(
-                f"{STORAGE_URL}/objects/{path}",
-                headers={"X-Storage-Key": key},
-                timeout=60,
-            )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+def _bucket() -> AsyncIOMotorGridFSBucket:
+    return AsyncIOMotorGridFSBucket(get_db(), bucket_name=_BUCKET_NAME)
 
 
 def build_upload_path(company_id: str, filename: str) -> str:
@@ -96,3 +35,59 @@ def build_upload_path(company_id: str, filename: str) -> str:
     if "." in filename:
         ext = filename.rsplit(".", 1)[-1].lower()[:8] or "bin"
     return f"{_APP_NAME}/companies/{company_id}/{uuid.uuid4().hex}.{ext}"
+
+
+async def put_object(path: str, data: bytes, content_type: str) -> dict:
+    gridfs_id = await _bucket().upload_from_stream(
+        path,
+        data,
+        metadata={
+            "contentType": content_type,
+            "storagePath": path,
+        },
+    )
+    return {
+        "path": path,
+        "size": len(data),
+        "storage_id": str(gridfs_id),
+        "backend": "mongodb_gridfs",
+    }
+
+
+async def _get_gridfs_object(path: str) -> tuple[bytes, str]:
+    db = get_db()
+    file_doc = await db[f"{_BUCKET_NAME}.files"].find_one({"filename": path})
+    if not file_doc:
+        raise FileNotFoundError(path)
+    stream = await _bucket().open_download_stream(file_doc["_id"])
+    data = await stream.read()
+    metadata = file_doc.get("metadata") or {}
+    content_type = metadata.get("contentType") or "application/octet-stream"
+    return data, content_type
+
+
+async def _get_legacy_object(path: str) -> tuple[bytes, str]:
+    key = os.environ.get("EMERGENT_LLM_KEY", "").strip()
+    if not key:
+        raise FileNotFoundError(path)
+
+    def fetch() -> requests.Response:
+        return requests.get(
+            f"{_LEGACY_STORAGE_URL}/objects/{path}",
+            headers={"X-Storage-Key": key},
+            timeout=60,
+        )
+
+    response = await asyncio.to_thread(fetch)
+    if response.status_code == 404:
+        raise FileNotFoundError(path)
+    response.raise_for_status()
+    return response.content, response.headers.get("Content-Type", "application/octet-stream")
+
+
+async def get_object(path: str) -> tuple[bytes, str]:
+    try:
+        return await _get_gridfs_object(path)
+    except FileNotFoundError:
+        # Compatibility path for files created before the storage migration.
+        return await _get_legacy_object(path)
