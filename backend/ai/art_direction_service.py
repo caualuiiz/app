@@ -62,43 +62,22 @@ def build_art_direction_context(
 
 
 async def _call_provider(context: dict[str, Any]) -> ArtDirection:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise RuntimeError("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-    except ImportError as exc:
-        raise RuntimeError("provider existente indisponível") from exc
-
+    from .openai_runtime import OpenAIExecutionError, generate_json
     prompt = (
         "Crie uma direção de arte específica para este negócio usando somente os dados fornecidos. "
-        "Não invente depoimentos, avaliações, prêmios, números, clientes, profissionais, serviços, preços, "
-        "endereço, certificações ou resultados. Quando faltar dado factual, registre MISSING em missing_data "
-        "ou omita. Não copie referências: extraia apenas princípios de design. Retorne JSON válido com exatamente "
-        "brand_personality, visual_concept, art_direction, image_direction, typography_direction, color_direction, "
-        "composition_direction, motion_direction, interaction_direction, three_d_direction, background_direction, "
-        "conversion_direction, confidence, warnings e missing_data. three_d_direction deve ser NONE, SUBTLE, HERO "
-        "ou IMMERSIVE. A proposta deve priorizar identidade, clareza, experiência e conversão.\n\n"
-        + json.dumps(context, ensure_ascii=False)
+        "Não invente depoimentos, avaliações, prêmios, números, clientes, profissionais, serviços, preços, endereço, "
+        "certificações ou resultados. Não copie referências: extraia apenas princípios de design. "
+        "Retorne JSON compatível com ArtDirection.\n\n" + json.dumps(context, ensure_ascii=False)
     )
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"art-direction-{uuid.uuid4()}",
-            system_message="Você é um diretor de arte digital. Responda somente JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        raw = await chat.send_message(UserMessage(text=prompt))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao gerar a direção de arte") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return ArtDirection.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato de Art Direction válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um diretor de arte digital com mais de 20 anos de experiência. Responda somente JSON válido.",
+            user_prompt=prompt,
+            model=MODEL_NAME,
+        )
+        return ArtDirection.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 async def generate_art_direction(
     company_id: str,
