@@ -47,44 +47,22 @@ def build_layout_context(company: dict[str, Any], system: DesignSystem) -> dict[
 
 
 async def _call_provider(context: dict[str, Any]) -> LayoutPlan:
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        raise RuntimeError("EMERGENT_LLM_KEY ausente")
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-    except ImportError as exc:
-        raise RuntimeError("provider existente indisponível") from exc
-
+    from .openai_runtime import OpenAIExecutionError, generate_json
     prompt = (
-        "Crie um Layout Plan específico para o negócio a partir do Design System fornecido. "
-        "Não use sempre a mesma grade de cards. Escolha uma experiência adequada ao negócio. "
-        "Retorne JSON válido com exatamente sections, page_rhythm, responsive_strategy, "
-        "accessibility_strategy, performance_strategy, confidence e warnings. Cada seção deve conter "
-        "id, purpose, layout, content_source, visual_treatment, interaction, motion e responsive_behavior. "
-        "layout deve ser um destes valores: cinematic_fullscreen, editorial_split, asymmetric_grid, "
-        "immersive_gallery, horizontal_gallery, sticky_storytelling, oversized_typography, project_showcase, "
-        "image_led_section, comparison, timeline, process_storytelling ou interactive_visual. "
+        "Crie um Layout Plan específico para o negócio a partir do Design System. "
+        "Não use sempre a mesma grade. Escolha uma experiência adequada ao negócio e retorne JSON compatível com LayoutPlan. "
         "Não invente serviços, preços, profissionais, depoimentos ou resultados.\n\n"
         + json.dumps(context, ensure_ascii=False)
     )
     try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=f"layout-plan-{uuid.uuid4()}",
-            system_message="Você é um arquiteto de experiências digitais. Responda somente JSON válido.",
-        ).with_model("openai", MODEL_NAME)
-        raw = await chat.send_message(UserMessage(text=prompt))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "O provider de IA falhou ao gerar o Layout Plan") from exc
-
-    try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].lstrip("json").strip()
-        return LayoutPlan.model_validate(json.loads(text))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, "A resposta da IA não possui formato de Layout Plan válido") from exc
-
+        result = await generate_json(
+            system_prompt="Você é um arquiteto de experiências digitais sênior. Responda somente JSON válido.",
+            user_prompt=prompt,
+            model=MODEL_NAME,
+        )
+        return LayoutPlan.model_validate(result)
+    except OpenAIExecutionError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 async def generate_layout_plan(
     company_id: str,
