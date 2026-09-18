@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
 from auth import get_current_user, is_valid_object_id, require_membership, require_roles
 from db import get_db
+from feature_limits import enforce_limit
 
 AppointmentStatus = Literal["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]
 Weekday = Literal["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
@@ -126,6 +127,7 @@ async def list_services(m=Depends(require_membership), only_active: bool = False
 @services_router.post("", status_code=201)
 async def create_service(payload: ServiceIn, m=Depends(require_roles("OWNER", "MANAGER"))):
     db = get_db()
+    await enforce_limit(db, m["company_id"], "services", "serviços", "max_services")
     n = now_iso()
     doc = {**payload.model_dump(), "company_id": m["company_id"], "created_at": n, "updated_at": n}
     res = await db.services.insert_one(doc)
