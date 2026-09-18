@@ -63,3 +63,22 @@ class AIOrchestrator:
         if isinstance(value, list):
             return [cls._sanitize(child) for child in value]
         return value
+
+
+    async def build_blueprint(self, *, context: dict[str, Any]):
+        safe_context = {
+            "company": self._pick(
+                context.get("company"),
+                ("name", "business_type", "description", "city"),
+            ),
+            "landing": self._pick(
+                context.get("landing"),
+                ("hero", "about", "style", "sections"),
+            ),
+            "visual_intelligence": self._sanitize(context.get("visual_intelligence")),
+            "reference_intelligence": self._sanitize(context.get("reference_intelligence")),
+            "art_direction": self._sanitize(context.get("art_direction")),
+            "design_system": self._sanitize(context.get("design_system")),
+            "layout_plan": self._sanitize(context.get("layout_plan")),
+        }
+        return await self.engine.build_blueprint(context=safe_context)
