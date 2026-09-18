@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Fase 8 — Hardening de produção e preparação de deploy
+Fase 8 — Hardening concluído; preparação de produção concluída em código
 
 ## Status
 
-CÓDIGO COMERCIAL CONSOLIDADO; HARDENING DE PRODUÇÃO EM ANDAMENTO
+CÓDIGO COMERCIAL CONSOLIDADO; HARDENING E PREPARAÇÃO DE PRODUÇÃO CONCLUÍDOS EM CÓDIGO
 
 ## Núcleo
 
@@ -53,6 +53,11 @@ O agente não aprende com clientes. Analisa os dados de cada negócio e decide c
 - Render configurado com `ENVIRONMENT=production` e `WHATSAPP_APP_SECRET`.
 - CORS de produção exige `FRONTEND_URL` e não utiliza wildcard.
 - Health check retorna HTTP 503 quando o MongoDB está indisponível.
+- Login agora persiste refresh sessions; refresh continua com rotação e revogação.
+- Reset tokens de senha são armazenados apenas como hash e sessões de refresh são invalidadas após troca de senha.
+- Dependência de bootstrap do storage legado removida do servidor.
+- Runbook de deploy e critérios de aceite adicionados em `PRODUCTION_RUNBOOK.md`.
+- CI confirmado verde no run `35332531375`: backend e frontend `success`.
 
 ## Produção
 
@@ -85,7 +90,7 @@ Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-A `main` está com o hardening de produção aplicado e o storage de uploads já não depende do serviço legado.
+A `main` está com o hardening de produção aplicado, CI verde confirmado, e o storage de uploads já não depende do serviço legado.
 
 Próximos passos técnicos:
 1. aplicar `render.yaml` no Render;
@@ -95,6 +100,8 @@ Próximos passos técnicos:
 5. configurar Stripe/WhatsApp/OpenAI;
 6. conectar primeiro domínio;
 7. executar E2E com cliente real.
+
+As etapas que dependem de contas externas (Render/MongoDB/Stripe/Meta/DNS) permanecem fora do GitHub até que essas conexões sejam disponibilizadas.
 
 ## Timestamp
 
