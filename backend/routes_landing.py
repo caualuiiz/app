@@ -155,7 +155,7 @@ async def _run_llm(company_id: str, message: str, image_paths: list[str] | None 
     history = messages[-10:]
     context = (
         f"State atual: {json.dumps(ctx_state, ensure_ascii=False)}\n"
-        f"Empresa: {company.get("name")} ({company.get("business_type")})\n"
+        f"Empresa: {company.get('name')} ({company.get('business_type')})\n"
         f"Histórico recente: {json.dumps(history, ensure_ascii=False)}\n\n"
         f"Usuário: {message}"
     )
