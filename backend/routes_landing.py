@@ -109,7 +109,7 @@ async def upload_gallery(file: UploadFile = File(...), m=Depends(require_roles("
     data = await file.read()
     if len(data) > 6 * 1024 * 1024: raise HTTPException(413, "Máximo 6MB")
     path = build_upload_path(m["company_id"], file.filename or "img.jpg")
-    result = put_object(path, data, file.content_type)
+    result = await put_object(path, data, file.content_type)
     await db.files.insert_one({"storage_path": result["path"], "company_id": m["company_id"],
                                "uploaded_by": m["user_id"], "content_type": file.content_type,
                                "kind": "landing_gallery", "is_deleted": False, "created_at": _now()})
@@ -163,7 +163,7 @@ async def _run_llm(company_id: str, message: str, image_paths: list[str] | None 
     images = []
     for path in (image_paths or [])[:8]:
         try:
-            data, content_type = get_object(path)
+            data, content_type = await get_object(path)
             images.append({"data": base64.b64encode(data).decode(), "content_type": content_type})
         except Exception:
             pass
@@ -462,7 +462,7 @@ async def public_file(path: str):
     db = get_db()
     rec = await db.files.find_one({"storage_path": path, "is_deleted": False})
     if not rec: raise HTTPException(404, "Arquivo não encontrado")
-    try: data, ct = get_object(path)
+    try: data, ct = await get_object(path)
     except Exception as e: raise HTTPException(502, str(e))
     return Response(content=data, media_type=rec.get("content_type", ct))
 
