@@ -49,6 +49,8 @@ async def create_indexes() -> None:
     await db.landing_blueprints.create_index([("company_id", 1), ("created_at", -1)])
     await db.custom_domains.create_index("domain", unique=True)
     await db.custom_domains.create_index([("company_id", 1), ("status", 1)])
+    await db.subscriptions.create_index([("company_id", 1), ("updated_at", -1)])
+    await db.billing_events.create_index("event_id", unique=True)
     await db.draft_versions.create_index([("company_id", 1), ("version", 1)], unique=True)
 
 
