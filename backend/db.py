@@ -36,6 +36,7 @@ async def create_indexes() -> None:
     await db.schedule_blocks.create_index([("company_id", 1), ("date", 1)])
     await db.assistant_sessions.create_index([("company_id", 1), ("user_id", 1)], unique=True)
     await db.assistant_audit.create_index([("company_id", 1), ("at", -1)])
+    await db.visual_profiles.create_index([("company_id", 1), ("created_at", -1)])
 
 
 def close_db() -> None:
