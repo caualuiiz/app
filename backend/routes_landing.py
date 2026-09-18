@@ -6,7 +6,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel, EmailStr, Field
 from auth import get_current_user, is_valid_object_id, require_membership, require_roles
 from db import get_db
@@ -247,8 +247,8 @@ async def analyze_gallery(m=Depends(require_roles("OWNER", "MANAGER"))):
 
 
 
-async def _resolve_custom_domain_company(host: str | None) -> dict:
-    domain = await resolve_custom_domain(host)
+async def _resolve_custom_domain_company(host: str | None, domain_name: str | None = None) -> dict:
+    domain = await resolve_custom_domain(domain_name or host)
     if not domain:
         raise HTTPException(404, "Domínio não vinculado")
     db = get_db()
@@ -264,8 +264,8 @@ async def _resolve_custom_domain_company(host: str | None) -> dict:
 
 
 @public_router.get("/domain")
-async def public_domain(host: str | None = Header(default=None)):
-    comp = await _resolve_custom_domain_company(host)
+async def public_domain(host: str | None = Header(default=None), domain: str | None = Query(default=None)):
+    comp = await _resolve_custom_domain_company(host, domain)
     db = get_db()
     cid = str(comp["_id"])
     lp = await db.landing_pages.find_one({"company_id": cid})
@@ -281,9 +281,9 @@ async def public_domain(host: str | None = Header(default=None)):
 
 
 @public_router.get("/domain/booking-context")
-async def custom_domain_booking_context(host: str | None = Header(default=None)):
+async def custom_domain_booking_context(host: str | None = Header(default=None), domain: str | None = Query(default=None)):
     db = get_db()
-    comp = await _resolve_custom_domain_company(host)
+    comp = await _resolve_custom_domain_company(host, domain)
     cid = str(comp["_id"])
     services = await db.services.find({"company_id": cid, "is_active": True}).to_list(100)
     memberships = await db.memberships.find({"company_id": cid, "status": "ACTIVE"}).to_list(100)
@@ -307,10 +307,11 @@ async def custom_domain_slots(
     professional_id: str,
     date: str,
     host: str | None = Header(default=None),
+    domain: str | None = Query(default=None),
 ):
     from routes_scheduling import _default_hours, _to_minutes, _from_minutes, _weekday_of
     db = get_db()
-    comp = await _resolve_custom_domain_company(host)
+    comp = await _resolve_custom_domain_company(host, domain)
     cid = str(comp["_id"])
     service = await db.services.find_one({"_id": _oid(service_id), "company_id": cid, "is_active": True})
     if not service:
@@ -362,10 +363,11 @@ async def custom_domain_slots(
 async def custom_domain_book(
     payload: PublicBookIn,
     host: str | None = Header(default=None),
+    domain: str | None = Query(default=None),
 ):
     from routes_scheduling import _validate_slot, _to_minutes, _from_minutes
     db = get_db()
-    comp = await _resolve_custom_domain_company(host)
+    comp = await _resolve_custom_domain_company(host, domain)
     cid = str(comp["_id"])
     service = await db.services.find_one({"_id": _oid(payload.service_id), "company_id": cid, "is_active": True})
     if not service:
