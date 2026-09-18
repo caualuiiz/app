@@ -62,10 +62,12 @@ async def create_checkout_session(request: Request, m=Depends(require_roles("OWN
             "mode": "subscription",
             "line_items[0][price]": price_id,
             "line_items[0][quantity]": "1",
-            "success_url": f"{frontend_url}/settings/billing?success=1",
-            "cancel_url": f"{frontend_url}/settings/billing?cancelled=1",
+            "success_url": f"{frontend_url}/settings/commercial?success=1",
+            "cancel_url": f"{frontend_url}/settings/commercial?cancelled=1",
             "metadata[company_id]": m["company_id"],
             "metadata[plan]": plan,
+            "subscription_data[metadata][company_id]": m["company_id"],
+            "subscription_data[metadata][plan]": plan,
         },
         timeout=20,
     )
@@ -89,7 +91,7 @@ async def create_billing_portal(m=Depends(require_roles("OWNER"))):
         headers=_stripe_headers(),
         data={
             "customer": customer_id,
-            "return_url": f"{frontend_url}/settings/billing",
+            "return_url": f"{frontend_url}/settings/commercial",
         },
         timeout=20,
     )
