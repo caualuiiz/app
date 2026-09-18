@@ -4,6 +4,7 @@ import axios from "axios";
 import LandingPreview from "@/components/LandingPreview";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const DOMAIN = window.location.hostname;
 
 export default function CustomDomainLandingPage() {
   const [data, setData] = useState(null);
@@ -12,7 +13,7 @@ export default function CustomDomainLandingPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: response } = await axios.get(`${BACKEND}/api/public/domain`);
+        const { data: response } = await axios.get(`${BACKEND}/api/public/domain`, { params: { domain: DOMAIN } });
         setData(response);
         document.title = response.company.name;
       } catch (e) {
