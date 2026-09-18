@@ -39,6 +39,7 @@ const NAV = [
   { to: "/landing", label: "Minha Landing", icon: Sparkles, testId: "nav-landing", roles: ["OWNER", "MANAGER"] },
   { to: "/settings/company", label: "Empresa", icon: Settings, testId: "nav-company", roles: ["OWNER", "MANAGER"] },
   { to: "/settings/users", label: "Membros", icon: UserCog, testId: "nav-users", roles: ["OWNER", "MANAGER"] },
+  { to: "/settings/commercial", label: "Comercial", icon: DollarSign, testId: "nav-commercial", roles: ["OWNER"] },
 ];
 
 const COMING_SOON = [
