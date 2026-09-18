@@ -32,7 +32,8 @@ export default function PublicBookingPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${isCustomDomain ? "domain" : `${slug}/booking-context`}`);
+        const basePath = isCustomDomain ? "domain/booking-context" : `${slug}/booking-context`;
+        const { data } = await axios.get(`${BACKEND}/api/public/${basePath}`, isCustomDomain ? { params: { domain: window.location.hostname } } : undefined);
         setCtx(data); document.title = `Agendar - ${data.company.name}`;
       } catch (e) { setErr(e?.response?.data?.detail || "Página não disponível"); }
     })();
@@ -49,9 +50,10 @@ export default function PublicBookingPage() {
     (async () => {
       setSlotsLoading(true);
       try {
-        const { data } = await axios.get(`${BACKEND}/api/public/${isCustomDomain ? "domain/slots" : `${slug}/slots`}`, {
-          params: { service_id: service.id, professional_id: professional.id, date },
-        });
+        const basePath = isCustomDomain ? "domain/slots" : `${slug}/slots`;
+        const params = { service_id: service.id, professional_id: professional.id, date };
+        if (isCustomDomain) params.domain = window.location.hostname;
+        const { data } = await axios.get(`${BACKEND}/api/public/${basePath}`, { params });
         setSlots(data.slots);
       } catch (e) { toast.error(e?.response?.data?.detail || "Erro ao buscar horários"); }
       finally { setSlotsLoading(false); }
@@ -61,11 +63,13 @@ export default function PublicBookingPage() {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const { data } = await axios.post(`${BACKEND}/api/public/${isCustomDomain ? "domain/book" : `${slug}/book`}`, {
+      const basePath = isCustomDomain ? "domain/book" : `${slug}/book`;
+      const requestParams = isCustomDomain ? { params: { domain: window.location.hostname } } : undefined;
+      const { data } = await axios.post(`${BACKEND}/api/public/${basePath}`, {
         service_id: service.id, professional_id: professional.id, date, start_time: chosenTime,
         client_name: client.name, client_phone: client.phone,
         client_email: client.email || null, notes: client.notes || null,
-      });
+      }, requestParams);
       setConfirmed(data);
     } catch (e) { toast.error(e?.response?.data?.detail || "Erro ao agendar"); }
     finally { setSubmitting(false); }
