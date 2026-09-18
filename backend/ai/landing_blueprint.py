@@ -43,3 +43,16 @@ class LandingBlueprint(BaseModel):
     confidence: float = Field(ge=0, le=1)
     warnings: list[str] = Field(default_factory=list, max_length=20)
     missing_data: list[str] = Field(default_factory=list, max_length=20)
+
+
+class LandingBlueprintResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_id: str
+    company_id: str
+    agent: str
+    agent_version: str
+    model: str
+    blueprint: LandingBlueprint
+    render_spec_request_id: str
+    created_at: str
