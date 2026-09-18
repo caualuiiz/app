@@ -315,3 +315,106 @@ async def create_landing_blueprint(
         render_spec_request_id=render_request_id,
         created_at=now,
     )
+
+
+async def refine_landing_blueprint(
+    company_id: str,
+    user_id: str,
+    blueprint_request_id: str,
+    critique_request_id: str,
+) -> LandingBlueprintResponse:
+    db = get_db()
+    blueprint_doc = await db.landing_blueprints.find_one({
+        "company_id": company_id,
+        "request_id": blueprint_request_id,
+    })
+    critique_doc = await db.landing_critiques.find_one({
+        "company_id": company_id,
+        "request_id": critique_request_id,
+    })
+    if not blueprint_doc or not critique_doc:
+        raise HTTPException(404, "Blueprint ou crítica não encontrados")
+
+    company = await db.companies.find_one({"_id": ObjectId(company_id)})
+    landing = await db.landing_pages.find_one({"company_id": company_id})
+    visual = await _latest(db, "visual_profiles", company_id)
+    reference = await _latest(db, "reference_profiles", company_id)
+    direction = await _latest(db, "art_directions", company_id)
+    system = await _latest(db, "design_systems", company_id)
+    layout = await _latest(db, "layout_plans", company_id)
+    if not company or not landing:
+        raise HTTPException(404, "Empresa ou landing não encontrada")
+
+    state = landing.get("state") or {}
+    context = {
+        "company": {
+            "name": company.get("name"),
+            "business_type": company.get("business_type"),
+            "description": company.get("description"),
+            "city": company.get("city"),
+        },
+        "landing": {
+            "hero": state.get("hero"),
+            "about": state.get("about"),
+            "style": state.get("style"),
+            "sections": state.get("sections"),
+        },
+        "visual_intelligence": visual,
+        "reference_intelligence": reference,
+        "art_direction": direction,
+        "design_system": system,
+        "layout_plan": layout,
+        "existing_blueprint": blueprint_doc.get("blueprint"),
+        "critique": critique_doc.get("critique"),
+    }
+
+    engine = LandingBrain()
+    try:
+        blueprint = await AIOrchestrator(engine).build_blueprint(context=context)
+        _validate_media_and_sections(blueprint, visual)
+    except ValueError as exc:
+        raise HTTPException(502, "Blueprint refinado rejeitado pela validação") from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, "Landing Brain indisponível") from exc
+
+    blueprint = blueprint.model_copy(update={
+        "professional_profile": "Diretor de Arte Digital e Especialista em Landing Pages — 20+ anos"
+    })
+    render_spec = compile_render_spec(company, blueprint)
+    now = _now()
+    request_id = str(uuid.uuid4())
+    render_request_id = str(uuid.uuid4())
+
+    await db.landing_blueprints.insert_one({
+        "request_id": request_id,
+        "company_id": company_id,
+        "user_id": user_id,
+        "agent": engine.name,
+        "agent_version": engine.version,
+        "model": engine.model,
+        "parent_blueprint_request_id": blueprint_request_id,
+        "critique_request_id": critique_request_id,
+        "blueprint": blueprint.model_dump(by_alias=True),
+        "created_at": now,
+    })
+    await db.render_specifications.insert_one({
+        "request_id": render_request_id,
+        "company_id": company_id,
+        "user_id": user_id,
+        "layout_plan_request_id": layout.get("request_id") if layout else None,
+        "render_specification": render_spec.model_dump(by_alias=True),
+        "provider": engine.name,
+        "model": engine.model,
+        "created_at": now,
+    })
+
+    return LandingBlueprintResponse(
+        request_id=request_id,
+        company_id=company_id,
+        agent=engine.name,
+        agent_version=engine.version,
+        model=engine.model,
+        blueprint=blueprint,
+        render_spec_request_id=render_request_id,
+        created_at=now,
+    )
