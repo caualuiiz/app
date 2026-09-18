@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth import require_roles
@@ -72,9 +75,9 @@ async def clear_config(m=Depends(require_roles("OWNER"))):
 
 @router.get("/webhook")
 async def verify_webhook(
-    hub_mode: str | None = None,
-    hub_verify_token: str | None = None,
-    hub_challenge: str | None = None,
+    hub_mode: str | None = Query(default=None, alias="hub.mode"),
+    hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
+    hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
 ):
     expected = __import__("os").environ.get("WHATSAPP_VERIFY_TOKEN", "")
     if hub_mode == "subscribe" and hub_verify_token and hub_verify_token == expected:
@@ -83,5 +86,15 @@ async def verify_webhook(
 
 
 @router.post("/webhook")
-async def receive_webhook(payload: dict):
+async def receive_webhook(request: Request):
+    secret = os.environ.get("WHATSAPP_APP_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(503, "Webhook WhatsApp não configurado")
+    raw = await request.body()
+    signature = request.headers.get("x-hub-signature-256", "")
+    if not signature.startswith("sha256="):
+        raise HTTPException(403, "Assinatura WhatsApp ausente")
+    expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature[7:]):
+        raise HTTPException(403, "Assinatura WhatsApp inválida")
     return {"received": True}
