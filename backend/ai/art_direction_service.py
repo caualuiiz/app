@@ -114,7 +114,7 @@ async def generate_art_direction(
         "visual_profile_request_id": visual_doc.get("request_id") if visual_doc else None,
         "reference_profile_request_id": reference_doc.get("request_id") if reference_doc else None,
         "direction": direction.model_dump(),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }
