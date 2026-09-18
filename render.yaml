@@ -58,3 +58,34 @@ services:
         sync: false
       - key: REACT_APP_APP_HOST
         sync: false
+
+  - type: cron
+    name: saas-whatsapp-reminders
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_reminders.py
+    schedule: "*/10 * * * *"
+    plan: starter
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LANDING_BRAIN_MODEL
+        value: gpt-5.6-luna
+      - key: FIELD_ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: saas-api
+          envVarKey: FIELD_ENCRYPTION_KEY
+      - key: WHATSAPP_API_VERSION
+        sync: false
+      - key: WHATSAPP_TEMPLATE_REMINDER_24H
+        sync: false
+      - key: WHATSAPP_TEMPLATE_REMINDER_2H
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: pt_BR
