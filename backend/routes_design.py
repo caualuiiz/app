@@ -8,6 +8,8 @@ from ai.art_direction import ArtDirectionListResponse, ArtDirectionResponse, Gen
 from ai.art_direction_service import generate_art_direction, list_directions
 from ai.design_system import DesignSystemListResponse, DesignSystemResponse, GenerateDesignSystemRequest
 from ai.design_system_service import generate_design_system, list_design_systems
+from ai.layout_plan import GenerateLayoutPlanRequest, LayoutPlanListResponse, LayoutPlanResponse
+from ai.layout_plan_service import generate_layout_plan, list_layout_plans
 from ai.reference import AnalyzeReferencesRequest, ReferenceProfileListResponse, ReferenceProfileResponse
 from ai.reference_intelligence import analyze_references, list_profiles as list_reference_profiles
 from ai.visual import AnalyzeImagesRequest, VisualProfileListResponse, VisualProfileResponse
@@ -54,3 +56,13 @@ async def generate_design_system_route(payload: GenerateDesignSystemRequest, m=D
 @router.get("/design-system", response_model=DesignSystemListResponse)
 async def get_design_systems(m=Depends(require_roles("OWNER", "MANAGER"))):
     return {"systems": await list_design_systems(m["company_id"])}
+
+
+@router.post("/generate-layout-plan", response_model=LayoutPlanResponse)
+async def generate_layout_plan_route(payload: GenerateLayoutPlanRequest, m=Depends(require_roles("OWNER", "MANAGER"))):
+    return await generate_layout_plan(m["company_id"], m["user_id"], payload)
+
+
+@router.get("/layout-plan", response_model=LayoutPlanListResponse)
+async def get_layout_plans(m=Depends(require_roles("OWNER", "MANAGER"))):
+    return {"plans": await list_layout_plans(m["company_id"])}
