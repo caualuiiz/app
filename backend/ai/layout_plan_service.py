@@ -88,7 +88,7 @@ async def generate_layout_plan(
         "user_id": user_id,
         "design_system_request_id": system_doc["request_id"],
         "layout_plan": plan.model_dump(),
-        "provider": "existing",
+        "provider": "openai",
         "model": MODEL_NAME,
         "created_at": created_at,
     }
