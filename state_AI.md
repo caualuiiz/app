@@ -77,7 +77,7 @@ Esses segredos não são armazenados no GitHub.
 
 ## Current Pause Point
 
-Código consolidado na branch `feature/ai-phase-3.2` e preparado para merge/produção.
+Código consolidado na `main` e preparado para produção.
 
 Após conectar a infraestrutura externa:
 1. aplicar `render.yaml`;
