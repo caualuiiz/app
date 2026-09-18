@@ -50,7 +50,7 @@ services:
   - type: web
     name: saas-frontend
     runtime: static
-    buildCommand: npm install --legacy-peer-deps --install-strategy=nested && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: frontend/build
     autoDeployTrigger: checksPass
     routes:
