@@ -7,7 +7,6 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from db import get_db
-from .ai_decision_service import _latest
 from .landing_blueprint import LandingBlueprint, LandingBlueprintResponse
 from .landing_brain import LandingBrain
 from .orchestrator import AIOrchestrator
@@ -25,6 +24,13 @@ from .render_specification import (
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+async def _latest(db, collection: str, company_id: str):
+    return await db[collection].find_one(
+        {"company_id": company_id},
+        sort=[("created_at", -1)],
+    )
 
 
 def _section_type(section_id: str, purpose: str) -> str:
