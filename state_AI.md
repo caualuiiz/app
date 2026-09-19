@@ -95,9 +95,9 @@ Esses segredos não são armazenados no GitHub.
 
 ## Senior Level
 
-`SENIOR_AGENT_SPEC.md` foi adicionado como referência oficial para arquitetura, comportamento, segurança, UX/UI, conversão, acessibilidade, SEO, performance, autocrítica, refinamento, testes e critérios de certificação do agente.
+`SENIOR_AGENT_SPEC.md` é a referência oficial para arquitetura, comportamento, segurança, UX/UI, conversão, acessibilidade, SEO, performance, autocrítica, refinamento, testes, critérios de certificação e, agora, Creative Development / Creative Technology do agente.
 
-Estado atual: **ESPECIFICAÇÃO SENIOR DEFINIDA; IMPLEMENTAÇÃO/CERTIFICAÇÃO CONTINUAM DEPENDENTES DE AUDITORIA POR REQUISITO**.
+Estado atual: **ESPECIFICAÇÃO SENIOR DEFINIDA E AMPLIADA; IMPLEMENTAÇÃO/CERTIFICAÇÃO CONTINUAM DEPENDENTES DE AUDITORIA POR REQUISITO**.
 
 ## Current Pause Point
 
@@ -122,3 +122,7 @@ As etapas que dependem de contas externas (Render/MongoDB/Stripe/Meta/DNS) perma
 ## Senior Spec Timestamp
 
 2026-09-18 — `SENIOR_AGENT_SPEC.md` adicionado ao repositório como especificação canônica.
+
+## Senior Creative Technology Update
+
+2026-09-18 — `SENIOR_AGENT_SPEC.md` ampliado com **Senior Creative Developer + Senior Creative Technologist**, incluindo React, motion design, GSAP, Three.js/WebGL, progressive enhancement, performance, reduced-motion, responsive motion, graceful degradation e critérios de seleção tecnológica.
