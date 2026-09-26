@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
 from auth import get_current_user, is_valid_object_id, require_membership, require_roles
@@ -377,7 +378,10 @@ async def create_appt(payload: AppointmentIn, m=Depends(require_roles("OWNER", "
         "notes": payload.notes, "status": payload.status,
         "created_at": n, "updated_at": n,
     }
-    res = await db.appointments.insert_one(doc)
+    try:
+        res = await db.appointments.insert_one(doc)
+    except DuplicateKeyError as exc:
+        raise HTTPException(409, "O horário acabou de ser reservado por outro agendamento") from exc
     doc["_id"] = res.inserted_id
     return _appt_out(doc)
 
@@ -426,9 +430,12 @@ async def update_appt(aid: str, payload: AppointmentUpdate,
 
     previous_status = existing["status"]
     data["updated_at"] = now_iso()
-    doc = await db.appointments.find_one_and_update(
-        {"_id": _oid(aid)}, {"$set": data}, return_document=True,
-    )
+    try:
+        doc = await db.appointments.find_one_and_update(
+            {"_id": _oid(aid), "company_id": m["company_id"]}, {"$set": data}, return_document=True,
+        )
+    except DuplicateKeyError as exc:
+        raise HTTPException(409, "O horário acabou de ser reservado por outro agendamento") from exc
     if previous_status != doc.get("status") and doc.get("status") in {"CONFIRMED", "CANCELLED"}:
         try:
             company = await db.companies.find_one({"_id": _oid(m["company_id"])})

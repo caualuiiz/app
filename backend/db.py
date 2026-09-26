@@ -31,6 +31,12 @@ async def create_indexes() -> None:
     await db.clients.create_index([("company_id", 1), ("name", 1)])
     await db.services.create_index([("company_id", 1), ("name", 1)])
     await db.appointments.create_index([("company_id", 1), ("date", 1), ("start_time", 1)])
+    await db.appointments.create_index(
+        [("company_id", 1), ("professional_id", 1), ("date", 1), ("start_time", 1)],
+        unique=True,
+        name="active_appointment_slot_unique",
+        partialFilterExpression={"status": {"$in": ["PENDING", "CONFIRMED", "COMPLETED"]}},
+    )
     await db.appointments.create_index([("company_id", 1), ("professional_id", 1), ("date", 1)])
     await db.appointments.create_index([("company_id", 1), ("client_id", 1)])
     await db.schedule_blocks.create_index([("company_id", 1), ("date", 1)])
