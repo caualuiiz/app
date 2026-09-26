@@ -1,0 +1,46 @@
+name: Mudança relevante
+description: Planejar uma mudança relevante antes da implementação
+title: "[Change] "
+labels: []
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objetivo
+      description: Qual problema será resolvido e por quê?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo
+      description: O que está incluído e explicitamente excluído?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceitação
+      description: Como saberemos que a mudança está correta?
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Riscos e dependências
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Estratégia de testes
+      description: Testes locais, CI, integração, E2E e infraestrutura necessária.
+    validations:
+      required: true
+  - type: checkboxes
+    id: architecture
+    attributes:
+      label: Revisão arquitetural
+      options:
+        - label: A mudança pode afetar segurança, multi-tenancy, concorrência, MongoDB, API ou integrações; usarei o checklist de Architecture Review.
+          required: false

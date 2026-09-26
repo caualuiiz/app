@@ -47,3 +47,24 @@ jobs:
         run: CI=true npm test -- --watchAll=false --runInBand
       - name: Build
         run: npm run build
+
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Diff hygiene
+        run: git diff --check HEAD^ HEAD
+      - name: Governance documents and templates
+        run: |
+          test -s CONTRIBUTING.md
+          test -s docs/ARCHITECTURE_REVIEW_CHECKLIST.md
+          test -s docs/DEFINITION_OF_DONE.md
+          test -s docs/MOTION_PRINCIPLES.md
+          test -s .github/PULL_REQUEST_TEMPLATE/default.md
+          test -s .github/ISSUE_TEMPLATE/relevant-change.yml
+      - name: Conditional infrastructure note
+        run: |
+          echo "Real MongoDB, external integrations, and full E2E remain conditional gates."
+          echo "They must run when the required credentials and infrastructure are configured."
