@@ -3,7 +3,7 @@ services:
     name: saas-api
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.lock
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     autoDeployTrigger: checksPass
@@ -15,6 +15,8 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
+        sync: false
+      - key: PASSWORD_RESET_URL_BASE
         sync: false
       - key: ENVIRONMENT
         value: production
@@ -55,7 +57,7 @@ services:
     name: saas-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm ci --legacy-peer-deps && npm run build
     staticPublishPath: build
     autoDeployTrigger: checksPass
     routes:
@@ -72,7 +74,7 @@ services:
     name: saas-whatsapp-reminders
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.lock
     startCommand: python scripts/run_reminders.py
     schedule: "*/10 * * * *"
     plan: starter

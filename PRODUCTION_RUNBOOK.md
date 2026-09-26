@@ -8,6 +8,7 @@
 - Stripe account, webhook endpoint and recurring Prices for STARTER and PRO.
 - Meta WhatsApp Cloud API app, phone number ID, access token, app secret and approved message templates.
 - DNS access for the application domain and each customer custom domain.
+- A transactional email provider and reset-email template for password recovery.
 
 ## 2. Render Blueprint
 
@@ -23,7 +24,7 @@ The frontend service uses `rootDir: frontend` and publishes `build`.
 ## 3. API environment variables
 
 Required:
-`MONGO_URL`, `DB_NAME`, `JWT_SECRET`, `FRONTEND_URL`, `OPENAI_API_KEY`, `FIELD_ENCRYPTION_KEY`.
+`MONGO_URL`, `DB_NAME`, `JWT_SECRET`, `FRONTEND_URL`, `PASSWORD_RESET_URL_BASE`, `OPENAI_API_KEY`, `FIELD_ENCRYPTION_KEY`.
 
 Commercial:
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO`.
@@ -37,6 +38,10 @@ Domain automation:
 `RENDER_API_KEY`, `RENDER_FRONTEND_SERVICE_ID`.
 
 Production sets `ENVIRONMENT=production`.
+
+Password reset links must be delivered by the configured transactional email
+provider. The API returns a reset token only outside production; it never
+returns or logs the secret token in production.
 
 ## 4. Frontend environment
 
@@ -69,3 +74,5 @@ Optional:
 - Uploads use MongoDB GridFS; legacy files remain readable during migration.
 - No real secrets are committed to Git.
 - Public booking remains tenant-scoped by slug/domain.
+- Backend installs use `backend/requirements.lock`; frontend installs use
+  `frontend/package-lock.json` with `npm ci --legacy-peer-deps`.

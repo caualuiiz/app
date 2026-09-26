@@ -7,6 +7,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import RequireRole from "@/components/RequireRole";
 import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
+import ForgotPasswordPage from "@/pages/ForgotPassword";
+import ResetPasswordPage from "@/pages/ResetPassword";
 import OnboardingPage from "@/pages/Onboarding";
 import DashboardPage from "@/pages/Dashboard";
 import CompanySettingsPage from "@/pages/CompanySettings";
@@ -30,6 +32,8 @@ function App() {
           <Route path="/" element={<RootEntry />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/onboarding" element={<OnboardingPage />} />

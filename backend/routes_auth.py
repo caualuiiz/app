@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pymongo import ReturnDocument
 
 from auth import (
     clear_auth_cookies,
@@ -215,10 +216,16 @@ async def refresh_token(request: Request, response: Response):
 
 @router.post("/forgot-password")
 async def forgot_password(payload: ForgotPasswordIn):
-    """Structure ready – logs reset link to server logs (Fase 1)."""
+    """Create a reset token without allowing account enumeration.
+
+    Development returns a local reset URL so the flow can be exercised without
+    an email provider. Production deliberately does not return or log the
+    secret token; an email provider must be wired before production rollout.
+    """
     db = get_db()
     email = payload.email.lower().strip()
     user = await db.users.find_one({"email": email})
+    response = {"success": True}
     # Always answer 200 to avoid user enumeration
     if user:
         token = secrets.token_urlsafe(32)
@@ -230,31 +237,42 @@ async def forgot_password(payload: ForgotPasswordIn):
             "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
             "created_at": _now_iso(),
         })
-        frontend = os.environ.get("FRONTEND_URL", "").rstrip("/")
-        logger.info("Password reset token created for account recovery")
-    return {"success": True}
+        reset_base = os.environ.get("PASSWORD_RESET_URL_BASE", "").rstrip("/")
+        if os.environ.get("ENVIRONMENT", "development").strip().lower() != "production":
+            if reset_base:
+                response["reset_url"] = f"{reset_base}?token={token}"
+            response["reset_token"] = token
+        else:
+            logger.info("Password reset requested for an existing account")
+    return response
 
 
 @router.post("/reset-password")
 async def reset_password(payload: ResetPasswordIn):
     db = get_db()
     token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
-    doc = await db.password_reset_tokens.find_one({"token_hash": token_hash})
-    if not doc or doc.get("used"):
-        raise HTTPException(status_code=400, detail="Token inválido ou já utilizado")
-    if doc["expires_at"] < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="Token expirado")
+    now = datetime.now(timezone.utc)
+    doc = await db.password_reset_tokens.find_one_and_update(
+        {
+            "token_hash": token_hash,
+            "used": False,
+            "expires_at": {"$gt": now},
+        },
+        {"$set": {"used": True, "used_at": now}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if not doc:
+        raise HTTPException(status_code=400, detail="Token inválido, expirado ou já utilizado")
 
-    await db.users.update_one(
+    result = await db.users.update_one(
         {"_id": ObjectId(doc["user_id"])},
         {"$set": {
             "password_hash": hash_password(payload.password),
             "updated_at": _now_iso(),
         }},
     )
-    await db.password_reset_tokens.update_one(
-        {"_id": doc["_id"]}, {"$set": {"used": True}}
-    )
+    if result.matched_count != 1:
+        raise HTTPException(status_code=400, detail="Conta associada ao token não encontrada")
     # Invalidate all existing refresh sessions after a password change.
     await db.refresh_sessions.update_many(
         {"user_id": doc["user_id"], "revoked_at": None},

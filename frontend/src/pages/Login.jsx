@@ -94,9 +94,9 @@ export default function LoginPage() {
             <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-medium" data-testid="go-to-register">
               Criar nova conta
             </Link>
-            <span className="text-slate-400 cursor-not-allowed" title="Disponível em breve">
+            <Link to="/forgot-password" className="text-indigo-600 hover:text-indigo-700 font-medium" data-testid="login-forgot-password-link">
               Esqueceu a senha?
-            </span>
+            </Link>
           </div>
         </form>
       </div>

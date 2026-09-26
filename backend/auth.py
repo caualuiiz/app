@@ -63,13 +63,19 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, _secret(), algorithms=[JWT_ALGORITHM])
 
 
+def _secure_cookies() -> bool:
+    """Require Secure cookies in production, but allow local HTTP development."""
+    return os.environ.get("ENVIRONMENT", "development").strip().lower() == "production"
+
+
 def set_auth_cookies(response, access: str, refresh: str) -> None:
+    secure = _secure_cookies()
     response.set_cookie(
-        key="access_token", value=access, httponly=True, secure=True,
+        key="access_token", value=access, httponly=True, secure=secure,
         samesite="lax", max_age=ACCESS_TTL_MIN * 60, path="/",
     )
     response.set_cookie(
-        key="refresh_token", value=refresh, httponly=True, secure=True,
+        key="refresh_token", value=refresh, httponly=True, secure=secure,
         samesite="lax", max_age=REFRESH_TTL_DAYS * 24 * 3600, path="/",
     )
 

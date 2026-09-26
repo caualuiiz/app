@@ -22,6 +22,17 @@ ALLOWED_MIME = {
 MAX_BYTES = 5 * 1024 * 1024  # 5MB
 
 
+def _matches_image_signature(content_type: str, data: bytes) -> bool:
+    signatures = {
+        "image/jpeg": lambda b: b.startswith(b"\xff\xd8\xff"),
+        "image/png": lambda b: b.startswith(b"\x89PNG\r\n\x1a\n"),
+        "image/gif": lambda b: b.startswith((b"GIF87a", b"GIF89a")),
+        "image/webp": lambda b: len(b) >= 12 and b[:4] == b"RIFF" and b[8:12] == b"WEBP",
+    }
+    matcher = signatures.get(content_type)
+    return bool(matcher and matcher(data))
+
+
 @router.post("/company-image")
 async def upload_company_image(
     kind: str,
@@ -39,8 +50,11 @@ async def upload_company_image(
         raise HTTPException(status_code=413, detail="Arquivo excede 5MB")
     if len(data) == 0:
         raise HTTPException(status_code=400, detail="Arquivo vazio")
+    if not _matches_image_signature(file.content_type, data):
+        raise HTTPException(status_code=400, detail="O conteúdo não corresponde ao tipo de imagem declarado")
 
-    path = build_upload_path(membership["company_id"], file.filename or f"image.{ALLOWED_MIME[file.content_type]}")
+    canonical_name = f"image.{ALLOWED_MIME[file.content_type]}"
+    path = build_upload_path(membership["company_id"], canonical_name)
 
     try:
         result = await put_object(path, data, file.content_type)
